@@ -36,3 +36,7 @@ Use
 
 5.  If you prefer to NOT use the built in authentication server, then you can disable it by calling `oauth.setEnableVerifierCallbackServer(false);`.  You are responsible for acquiring the pin from the user via a GUI element or other means.
 
+The Mini Callback Server
+-----------
+
+The mini callback server is defined in [ofxOAuthVerifierCallbackServer.h](https://github.com/bakercp/ofxOAuth/blob/master/src/ofxOAuthVerifierCallbackServer.h) and an interface is defined in [ofxOAuthVerifierCallbackServer.h](https://github.com/bakercp/ofxOAuth/blob/master/src/ofxOAuthVerifierCallbackServerInterface.h).  Basically, during use the minimal web server (created using Poco's HTTPServer class) is started in a separate thread and waits for a callback from the API's authorization server.  You can define the callback web page doc root by calling `    oauth.setVerifierCallbackServerDocRoot()` with the location of your doc root.  It is simple and will server basic html, images, and javascript.  It could be extended to serve other data, but this is likely not needed.
