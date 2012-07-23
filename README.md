@@ -40,3 +40,8 @@ The Mini Callback Server
 -----------
 
 The mini callback server is defined in [ofxOAuthVerifierCallbackServer.h](https://github.com/bakercp/ofxOAuth/blob/master/src/ofxOAuthVerifierCallbackServer.h) and an interface is defined in [ofxOAuthVerifierCallbackInterface.h](https://github.com/bakercp/ofxOAuth/blob/master/src/ofxOAuthVerifierCallbackInterface.h).  Basically, during use the minimal web server (created using Poco's HTTPServer class) is started in a separate thread and waits for a callback from the API's authorization server.  You can define the callback web page doc root by calling `    oauth.setVerifierCallbackServerDocRoot()` with the location of your doc root.  It is simple and will serve basic html, images, and javascript.  It could be extended to serve other data, but this is likely not needed.
+
+A few more things.
+-----------
+
+This lib is provided with libs for openssl, libcurl and liboauth.  This allows for ssl-based authentication.  In the future (once oF is distributed with an ssl compatible web client), libcurl, openssl, etc can be removed.
