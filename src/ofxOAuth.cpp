@@ -566,7 +566,7 @@ string ofxOAuth::requestUserVerification(string additionalAuthParams, bool launc
     url += getRequestToken();
     url += additionalAuthParams;
 
-    if(launchBrowser) ofxLaunchBrowser(url);
+    if(launchBrowser) ofLaunchBrowser(url);
 
     return url;
 }
