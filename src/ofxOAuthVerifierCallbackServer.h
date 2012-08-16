@@ -28,6 +28,7 @@
 #include "ofMain.h"
 #include "ofxOAuthVerifierCallbackInterface.h"
 
+#include "Poco/String.h"
 #include "Poco/SharedPtr.h"
 #include "Poco/URI.h"
 
@@ -40,6 +41,7 @@
 #include "Poco/Net/HTTPServerResponse.h"
 #include "Poco/Net/NameValueCollection.h"
 
+using Poco::replace;
 using namespace Poco::Net;
 
 //--------------------------------------------------------------
@@ -56,28 +58,48 @@ public:
     void handleRequest(HTTPServerRequest& request, 
                        HTTPServerResponse& response) { 
 
-        response.setChunkedTransferEncoding(true); 
+        Poco::URI uri(request.getURI());
+
+        response.setChunkedTransferEncoding(true);
         response.setKeepAlive(false);
 
-        Poco::URI uri(request.getURI()); 
+        // send raw request
+        callback->receivedVerifierCallbackRequest(request);
         
-        string query = uri.getQuery();
-        
-        map<string, string> parsedQuery;
-        
-        if(parseQuery(query,parsedQuery)) {
-            map<string, string>::iterator iter,iter1;
-            iter = parsedQuery.find("oauth_token");
-            iter1 = parsedQuery.find("oauth_verifier");
-            
-            if(iter != parsedQuery.end() && iter1 != parsedQuery.end()) {
-                callback->setRequestTokenVerifier((*iter).second, (*iter1).second);
-                ofLogVerbose("ofxOAuthAuthReqHandler: Got Request Token / Verifier = " + (*iter).second + " / " + (*iter).second + " - Fancy!");
-            } else {
-                ofLogError("ofxOAuthAuthReqHandler: did not have both oauth_token and oauth_verifier.");
-            }
+        // send the cookies
+        Poco::Net::NameValueCollection cookies;
+        request.getCookies(cookies);
+        if(!cookies.empty()) {
+            callback->receivedVerifierCallbackCookies(cookies);
+        } else {
+            ofLogVerbose("ofxOAuthAuthReqHandler") << "Cookies are empty.";
         }
         
+        
+        // send the headers
+        if(!request.empty()) {
+            callback->receivedVerifierCallbackHeaders(request);
+        } else {
+            ofLogVerbose("ofxOAuthAuthReqHandler") << "Headers are empty.";
+        }
+        
+        Poco::Net::NameValueCollection queryParams;
+        parseQuery(uri.getQuery(),queryParams);
+        if(!queryParams.empty()) {
+            callback->receivedVerifierCallbackGetParams(queryParams);
+        } else {
+            ofLogVerbose("ofxOAuthAuthReqHandler") << "Get Query params are empty.";
+        }
+                
+        // TODO: we currently don't parse POST data.
+        Poco::Net::NameValueCollection postParams;
+        // Parse them here ...
+        if(!postParams.empty()) {
+            callback->receivedVerifierCallbackPostParams(postParams);
+        } else {
+            ofLogVerbose("ofxOAuthAuthReqHandler") << "Post Query params are empty.";
+        }
+
         string path = uri.getPath();
 
         if(isMatch(path,"/")) { path = "/index.html";} // default index
@@ -88,32 +110,65 @@ public:
         if(file.exists()) {
             // text types
             string ext = file.getExtension();
-
+            bool doReplacements = false;
+            
             if(isMatch(ext, "html") || isMatch(ext, "htm")) {
-                request.setContentType("text/html");
+                response.setContentType("text/html");
+                doReplacements = true;
             } else if(isMatch(ext, "json")) {
-                request.setContentType("application/json");
+                response.setContentType("application/json");
                 // image types
             } else if(isMatch(ext, "jpg") || isMatch(ext, "jpeg") || isMatch(ext, "jpe")) {
-                request.setContentType("image/jpeg");
+                response.setContentType("image/jpeg");
             } else if(isMatch(ext, "png")) {
-                request.setContentType("image/png");
+                response.setContentType("image/png");
             } else if(isMatch(ext, "gif")) {
-                request.setContentType("image/gif");
+                response.setContentType("image/gif");
             } else if(isMatch(ext, "ico")) {
-                request.setContentType("image/vnd.microsoft.icon");
+                response.setContentType("image/vnd.microsoft.icon");
 
                 // everything else
             } else {
-                request.setContentType("text/html");
+                response.setContentType("text/html");
             }
+            
+        
+            // replace any magic keys
+            
+            // {@QUERY} -> is replaced with URL
+            // {@GET_PARAMS} -> is replaced with a params
+            // {@POST_PARAMS} -> is replaced with post params
+            // {@HEADERS} -> is replaced with headers
+            // {@COOKIES} -> is replaced with cookies
             
             // load the file into the buffer
             file >> outputBuffer;
             
+            if(doReplacements) {
+                string text = outputBuffer.getText();
+                
+                string target;
+                target = "{@QUERY}";
+                Poco::replaceInPlace(text, target, makeHTMLList(uri.getQuery()));
+                
+                target = "{@GET_PARAMS}";
+                Poco::replaceInPlace(text, target, makeHTMLList(queryParams));
+                
+                target = "{@POST_PARAMS}";
+                Poco::replaceInPlace(text, target, makeHTMLList(postParams));
+
+                target = "{@HEADERS}";
+                Poco::replaceInPlace(text, target, makeHTMLList(request));
+                
+                target = "{@COOKIES}";
+                Poco::replaceInPlace(text, target, makeHTMLList(cookies));
+
+                outputBuffer.set(text);
+            }
+            
         } else {
             response.setStatusAndReason(HTTPResponse::HTTP_NOT_FOUND,"Sorry, couldn't find it.");
-            request.setContentType("text/html");
+            response.setContentType("text/html");
 
             ofFile file(docRoot + "/404.html");
             if(file.exists()) {
@@ -126,23 +181,40 @@ public:
 
         std::ostream& ostr = response.send();
         ostr << outputBuffer;
-        
+    
     }
     
 protected:
     
-    bool parseQuery(const string& query, map<string, string>& returnParams) {
-        
+    string makeHTMLList(const Poco::Net::NameValueCollection& params) {
+        string html;
+        html += "<ul>";
+        for(NameValueCollection::ConstIterator iter = params.begin(); iter != params.end(); iter++) {
+            html += ("<li>" + (*iter).first + "=" + (*iter).second + "</li>");
+        }
+        html += "</ul>";
+        return html;
+    }
+    
+    string makeHTMLList(const string& value) {
+        string html;
+        html += "<ul>";
+        html += ("<li>" + value + "</li>");
+        html += "</ul>";
+        return html;
+    }
+
+    
+    bool parseQuery(const string& query, Poco::Net::NameValueCollection& returnParams) {
         if(!query.empty()) {
             // could use oauth_split_url_parameters here.
             vector<string> params = ofSplitString(query, "&", true);
-            
             for(int i = 0; i < params.size(); i++) {
                 vector<string> tokens = ofSplitString(params[i], "=");
                 if(tokens.size() == 2) {
-                    returnParams[tokens[0]] = tokens[1];
+                    returnParams.set(tokens[0], tokens[1]);
                 } else {
-                    ofLogWarning("ofxOAuthAuthReqHandler: Return parameter did not have 2 values: " + ofToString(params[i]) + " - skipping.");
+                    ofLogWarning("ofxOAuthAuthReqHandler") << "Return parameter did not have 2 values: " << ofToString(params[i]) << " - skipping.";
                 }
             }
         }
@@ -188,13 +260,13 @@ public:
    
     virtual ~ofxOAuthVerifierCallbackServer() {
         waitForThread(true); // just in case
-        ofLogVerbose("ofxOAuthVerifierCallbackServer: Server destroyed.");
+        ofLogVerbose("ofxOAuthVerifierCallbackServer") << "Server destroyed.";
 
     }
     void start(){ startThread(true, false); }
     void stop() { stopThread(); }
     void threadedFunction(){
-        ofLogVerbose("ofxOAuthVerifierCallbackServer: Server starting @ " + getURL());
+        ofLogVerbose("ofxOAuthVerifierCallbackServer") << "Server starting @ " << getURL();
         ServerSocket socket(port);
         // all of these params are an attempt to make the server shut down VERY quickly.
         HTTPServerParams* pParams = new HTTPServerParams();
@@ -210,12 +282,12 @@ public:
                           socket,
                           new HTTPServerParams());
         server.start(); // start the http server
-        ofLogVerbose("ofxOAuthVerifierCallbackServer: Server successfully started @ " + getURL());
+        ofLogVerbose("ofxOAuthVerifierCallbackServer") << "Server successfully started @ " + getURL();
         while( isThreadRunning() != 0 ) sleep(250);
         server.stop(); // stop the http server
         socket.close();
         babyPool.joinAll();
-        ofLogVerbose("ofxOAuthVerifierCallbackServer: Server successfully shut down.");
+        ofLogVerbose("ofxOAuthVerifierCallbackServer") << "Server successfully shut down.";
     }
 
     string getURL() { return "http://127.0.0.1:" + ofToString(port) + "/";}

@@ -214,6 +214,15 @@ protected:
     bool enableVerifierCallbackServer;
     ofPtr<ofxOAuthVerifierCallbackServer> verifierCallbackServer;
     string verifierCallbackServerDocRoot;
+
+    // callbacks from the webserver
+    void receivedVerifierCallbackRequest(const Poco::Net::HTTPServerRequest& request);
+    void receivedVerifierCallbackHeaders(const Poco::Net::NameValueCollection& headers);
+    void receivedVerifierCallbackCookies(const Poco::Net::NameValueCollection& cookies);
+    void receivedVerifierCallbackGetParams(const Poco::Net::NameValueCollection& getParams);
+    void receivedVerifierCallbackPostParams(const Poco::Net::NameValueCollection& postParams);
+
+    
 private:
     
     OAuthMethod _getOAuthMethod();

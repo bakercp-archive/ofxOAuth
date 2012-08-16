@@ -25,6 +25,9 @@
 #pragma once
 
 #include <string>
+#include "Poco/Net/HTTPServerRequest.h"
+#include "Poco/Net/NameValueCollection.h"
+
 using namespace std;
 
 class ofxOAuthVerifierCallbackInterface {
@@ -32,4 +35,11 @@ public:
     ofxOAuthVerifierCallbackInterface() {}
     virtual ~ofxOAuthVerifierCallbackInterface() {}
     virtual void setRequestTokenVerifier(const string& requestToken, const string& requestTokenVerifier) = 0;
+
+    virtual void receivedVerifierCallbackRequest(const Poco::Net::HTTPServerRequest& request) = 0;
+    virtual void receivedVerifierCallbackHeaders(const Poco::Net::NameValueCollection& headers) = 0;
+    virtual void receivedVerifierCallbackCookies(const Poco::Net::NameValueCollection& cookies) = 0;
+    virtual void receivedVerifierCallbackGetParams(const Poco::Net::NameValueCollection& getParams) = 0;
+    virtual void receivedVerifierCallbackPostParams(const Poco::Net::NameValueCollection& postParams) = 0;
+    
 };

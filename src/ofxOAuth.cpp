@@ -643,6 +643,50 @@ void   ofxOAuth::setConsumerSecret(const string& v) {consumerSecret = v; }
 void   ofxOAuth::setApiName(const string& v) { apiName = v; }
 string ofxOAuth::getApiName() { return apiName; }
 
+//--------------------------------------------------------------
+void ofxOAuth::receivedVerifierCallbackRequest(const Poco::Net::HTTPServerRequest& request) {
+    ofLogVerbose("ofxOAuth") << "receivedVerifierCallbackRequest - not implemented.";
+    // does nothing with this, but subclasses might.
+}
+
+//--------------------------------------------------------------
+void ofxOAuth::receivedVerifierCallbackHeaders(const Poco::Net::NameValueCollection& headers) {
+    for(NameValueCollection::ConstIterator iter = headers.begin(); iter != headers.end(); iter++) {
+        ofLogVerbose("ofxOAuth") << "receivedVerifierCallbackHeaders : " << (*iter).first << "=" << (*iter).second << endl;
+    }
+    // does nothing with this, but subclasses might.
+}
+
+//--------------------------------------------------------------
+void ofxOAuth::receivedVerifierCallbackCookies(const Poco::Net::NameValueCollection& cookies) {
+    for(NameValueCollection::ConstIterator iter = cookies.begin(); iter != cookies.end(); iter++) {
+        ofLogVerbose("ofxOAuth") << "receivedVerifierCallbackCookies : " << (*iter).first << "=" << (*iter).second << endl;
+    }
+    // does nothing with this, but subclasses might.
+}
+
+//--------------------------------------------------------------
+void ofxOAuth::receivedVerifierCallbackGetParams(const Poco::Net::NameValueCollection& getParams) {
+    for(NameValueCollection::ConstIterator iter = getParams.begin(); iter != getParams.end(); iter++) {
+        ofLogVerbose("ofxOAuth") << "receivedVerifierCallbackGetParams : " << (*iter).first << "=" << (*iter).second << endl;
+    }
+
+    // we normally extract these params
+    if(getParams.has("oauth_token") && getParams.has("oauth_verifier")) {
+        setRequestTokenVerifier(getParams.get("oauth_token"), getParams.get("oauth_verifier"));
+    }
+    
+    // subclasses might also want to extract other get parameters.    
+}
+
+//--------------------------------------------------------------
+void ofxOAuth::receivedVerifierCallbackPostParams(const Poco::Net::NameValueCollection& postParams) {
+    for(NameValueCollection::ConstIterator iter = postParams.begin(); iter != postParams.end(); iter++) {
+        ofLogVerbose("ofxOAuth") << "receivedVerifierCallbackPostParams : " << (*iter).first << "=" << (*iter).second << endl;
+    }
+    
+    // does nothing with this, but subclasses might.
+}
 
 //--------------------------------------------------------------
 string ofxOAuth::getRealm() { return realm; }
