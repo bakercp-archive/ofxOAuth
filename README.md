@@ -3,18 +3,7 @@ ofxOAuth
 
 ![Screenshot](https://github.com/bakercp/ofxOAuth/raw/master/screen.png)
 
-License
--------
-
-Copyright (c) 2011, 2012 Christopher Baker <http://christopherbaker.net>
-
-MIT License.
-
-For information on usage and redistribution, and for a DISCLAIMER OF ALL
-WARRANTIES, see the file, "LICENSE.txt," in this distribution.
-
-Description
------------
+#Description
 
 An OAuth 1.0 system (via [liboauth](http://liboauth.sourceforge.net/)) with pin-less verification via a mini callback server (screenshot above).  Examples included for Twitter, Fitbit, etc.
 
@@ -23,8 +12,7 @@ The demo requires:
 
 openFrameworks https://github.com/openframeworks/openFrameworks 
 
-Use
------------
+#Use
 
 1.  Register an app and get your CONSUMER_KEY / CONSUMER_SECRET from the API of your choice (e.g. Twitter).  Set the callback URL of your app to [http://127.0.0.1] and make sure it is set up as a "web based" app (even though it is a desktop based app).  This is so you can use the built-in web-server for pin-less authentication.
 
@@ -36,12 +24,41 @@ Use
 
 5.  If you prefer to NOT use the built in authentication server, then you can disable it by calling `oauth.setEnableVerifierCallbackServer(false);`.  You are responsible for acquiring the pin from the user via a GUI element or other means.
 
-The Mini Callback Server
------------
+##The Mini Callback Server
 
-The mini callback server is defined in [ofxOAuthVerifierCallbackServer.h](https://github.com/bakercp/ofxOAuth/blob/master/src/ofxOAuthVerifierCallbackServer.h) and an interface is defined in [ofxOAuthVerifierCallbackInterface.h](https://github.com/bakercp/ofxOAuth/blob/master/src/ofxOAuthVerifierCallbackInterface.h).  Basically, during use the minimal web server (created using Poco's HTTPServer class) is started in a separate thread and waits for a callback from the API's authorization server.  You can define the callback web page doc root by calling `    oauth.setVerifierCallbackServerDocRoot()` with the location of your doc root.  It is simple and will serve basic html, images, and javascript.  It could be extended to serve other data, but this is likely not needed.
+The mini callback server is defined in [ofxOAuthVerifierCallbackServer.h](https://github.com/bakercp/ofxOAuth/blob/master/src/ofxOAuthVerifierCallbackServer.h) and an interface is defined in [ofxOAuthVerifierCallbackInterface.h](https://github.com/bakercp/ofxOAuth/blob/master/src/ofxOAuthVerifierCallbackInterface.h).  
 
-A few more things.
------------
+Additionally, ofxOAuth now has a base defines methods that include:
 
-This lib is provided with libs for openssl, libcurl and liboauth.  This allows for ssl-based authentication.  In the future (once oF is distributed with an ssl compatible web client), libcurl, openssl, etc can be removed.
+
+```c++
+	// from ofxOAuth.h
+    // callbacks from the webserver
+    void receivedVerifierCallbackRequest(const Poco::Net::HTTPServerRequest& request);
+    void receivedVerifierCallbackHeaders(const Poco::Net::NameValueCollection& headers);
+    void receivedVerifierCallbackCookies(const Poco::Net::NameValueCollection& cookies);
+    void receivedVerifierCallbackGetParams(const Poco::Net::NameValueCollection& getParams);
+    void receivedVerifierCallbackPostParams(const Poco::Net::NameValueCollection& postParams);
+```
+These are used for default parameter extraction, but can be overridden by custom subclasses when non standard oauth parameters or other data is needed.
+
+
+Basically, during use the minimal web server (created using Poco's HTTPServer class) is started in a separate thread and waits for a callback from the API's authorization server.  You can define the callback web page doc root by calling `    oauth.setVerifierCallbackServerDocRoot()` with the location of your doc root.  It is simple and will serve basic html, images, and javascript.  It could be extended to serve other data, but this is likely not needed.  If desired, html files can use tags like `{@COOKIES}` to print out extracted cookie data in the page dynamically.  See the [index.html](https://github.com/bakercp/ofxOAuth/blob/master/0_example-generic/bin/data/VerifierCallbackServer/index.html) for an example and complete listing. 
+
+#A few more things.
+
+This lib is provided with libs for openssl, libcurl and liboauth.  This allows for ssl-based authentication.  In the future (once oF is distributed with an ssl compatible web client i.e. [here](https://github.com/openframeworks/openFrameworks/pull/1461)), libcurl, openssl, etc can be removed.
+
+##OAuth 2.0
+[OAuth 2.0](http://oauth.net/2/) uses a slightly different (simpler in many ways) schema.  [liboauth](http://liboauth.sourceforge.net/) and ofxOAuth does not directly support this out of the box, but it is in the works.  If you are interested in helping develop this, please contact the author.
+
+#License
+
+Copyright (c) 2011, 2012 Christopher Baker <http://christopherbaker.net>
+
+MIT License.
+
+For information on usage and redistribution, and for a DISCLAIMER OF ALL
+WARRANTIES, see the file, "LICENSE.txt," in this distribution.
+
+
