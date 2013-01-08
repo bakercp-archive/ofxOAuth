@@ -63,6 +63,8 @@ public:
         response.setChunkedTransferEncoding(true);
         response.setKeepAlive(false);
 
+        ofLogVerbose("ofxOAuthAuthReqHandler::handleRequest") << "request: " << request.getURI();
+
         // send raw request
         callback->receivedVerifierCallbackRequest(request);
         
@@ -72,7 +74,7 @@ public:
         if(!cookies.empty()) {
             callback->receivedVerifierCallbackCookies(cookies);
         } else {
-            ofLogVerbose("ofxOAuthAuthReqHandler") << "Cookies are empty.";
+            ofLogVerbose("ofxOAuthAuthReqHandler::handleRequest") << "Cookies are empty.";
         }
         
         
@@ -80,7 +82,7 @@ public:
         if(!request.empty()) {
             callback->receivedVerifierCallbackHeaders(request);
         } else {
-            ofLogVerbose("ofxOAuthAuthReqHandler") << "Headers are empty.";
+            ofLogVerbose("ofxOAuthAuthReqHandler::handleRequest") << "Headers are empty.";
         }
         
         Poco::Net::NameValueCollection queryParams;
@@ -88,7 +90,7 @@ public:
         if(!queryParams.empty()) {
             callback->receivedVerifierCallbackGetParams(queryParams);
         } else {
-            ofLogVerbose("ofxOAuthAuthReqHandler") << "Get Query params are empty.";
+            ofLogVerbose("ofxOAuthAuthReqHandler::handleRequest") << "Get Query params are empty.";
         }
                 
         // TODO: we currently don't parse POST data.
@@ -97,7 +99,7 @@ public:
         if(!postParams.empty()) {
             callback->receivedVerifierCallbackPostParams(postParams);
         } else {
-            ofLogVerbose("ofxOAuthAuthReqHandler") << "Post Query params are empty.";
+            ofLogVerbose("ofxOAuthAuthReqHandler::handleRequest") << "Post Query params are empty.";
         }
 
         string path = uri.getPath();
@@ -214,7 +216,7 @@ protected:
                 if(tokens.size() == 2) {
                     returnParams.set(tokens[0], tokens[1]);
                 } else {
-                    ofLogWarning("ofxOAuthAuthReqHandler") << "Return parameter did not have 2 values: " << ofToString(params[i]) << " - skipping.";
+                    ofLogWarning("ofxOAuthAuthReqHandler::parseQuery") << "Return parameter did not have 2 values: " << ofToString(params[i]) << " - skipping.";
                 }
             }
         }
@@ -260,13 +262,13 @@ public:
    
     virtual ~ofxOAuthVerifierCallbackServer() {
         waitForThread(true); // just in case
-        ofLogVerbose("ofxOAuthVerifierCallbackServer") << "Server destroyed.";
+        ofLogVerbose("ofxOAuthVerifierCallbackServer::~ofxOAuthVerifierCallbackServer") << "Server destroyed.";
 
     }
     void start(){ startThread(true, false); }
     void stop() { stopThread(); }
     void threadedFunction(){
-        ofLogVerbose("ofxOAuthVerifierCallbackServer") << "Server starting @ " << getURL();
+        ofLogVerbose("ofxOAuthVerifierCallbackServer::~ofxOAuthVerifierCallbackServer") << "Server starting @ " << getURL();
         ServerSocket socket(port);
         // all of these params are an attempt to make the server shut down VERY quickly.
         HTTPServerParams* pParams = new HTTPServerParams();
@@ -282,12 +284,12 @@ public:
                           socket,
                           new HTTPServerParams());
         server.start(); // start the http server
-        ofLogVerbose("ofxOAuthVerifierCallbackServer") << "Server successfully started @ " + getURL();
+        ofLogVerbose("ofxOAuthVerifierCallbackServer::~ofxOAuthVerifierCallbackServer") << "Server successfully started @ " + getURL();
         while( isThreadRunning() != 0 ) sleep(250);
         server.stop(); // stop the http server
         socket.close();
         babyPool.joinAll();
-        ofLogVerbose("ofxOAuthVerifierCallbackServer") << "Server successfully shut down.";
+        ofLogVerbose("ofxOAuthVerifierCallbackServer::~ofxOAuthVerifierCallbackServer") << "Server successfully shut down.";
     }
 
     string getURL() { return "http://127.0.0.1:" + ofToString(port) + "/";}
