@@ -464,7 +464,7 @@ map<string, string> ofxOAuth::obtainAccessToken() {
                               consumerKey.c_str(), //< consumer key - posted plain text
                               consumerSecret.c_str(), //< consumer secret - used as 1st part of secret-key
                               requestToken.c_str(),  //< token key - posted plain text in URL
-                              NULL); //< token secret - used as 2st part of secret-key
+                              requestTokenSecret.c_str()); //< token secret - used as 2st part of secret-key
     
     // collect any parameters in our list that need to be placed in the request URI
     req_url = oauth_serialize_url_sep(argc, 0, argv, const_cast<char *>("&"), 1); 
