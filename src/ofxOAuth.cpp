@@ -78,13 +78,28 @@ ofxOAuth::~ofxOAuth() {
 }
 
 //--------------------------------------------------------------
+void ofxOAuth::setup(const string& _apiURL,
+                     const string& _requestTokenUrl,
+                     const string& _accessTokenUrl,
+                     const string& _authorizeUrl,
+                     const string& _consumerKey,
+                     const string& _consumerSecret) {
+    setApiURL(_apiURL,false);
+    setRequestTokenURL(_requestTokenUrl);
+    setAccessTokenURL(_accessTokenUrl);
+    setAuthorizationURL(_authorizeUrl);
+    setConsumerKey(_consumerKey);
+    setConsumerSecret(_consumerSecret);
+}
+
+
+//--------------------------------------------------------------
 void ofxOAuth::setup(const string& _apiURL, 
                      const string& _consumerKey, 
                      const string& _consumerSecret) {
     setApiURL(_apiURL);
     setConsumerKey(_consumerKey);
     setConsumerSecret(_consumerSecret);
-
 }
 
 //--------------------------------------------------------------

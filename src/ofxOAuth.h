@@ -62,6 +62,13 @@ public:
                const string& consumerKey, 
                const string& consumerSecret);
     
+    void setup(const string& _apiURL,
+               const string& _requestTokenUrl,
+               const string& _accessTokenUrl,
+               const string& _authorizeUrl,
+               const string& _consumerKey,
+               const string& _consumerSecret);
+
     void update(ofEventArgs& args);
     
     bool isAuthorized();
