@@ -58,6 +58,7 @@ ofxOAuth::ofxOAuth() : ofxOAuthVerifierCallbackInterface() {
     
     credentialsPathname = "credentials.xml";
     verifierCallbackServerDocRoot = "VerifierCallbackServer/";
+    vertifierCallbackServerPort = -1;
     enableVerifierCallbackServer = true;
     
     firstTime = true;
@@ -111,7 +112,7 @@ void ofxOAuth::update(ofEventArgs& args) {
     
     if(accessFailed) {
         if(!accessFailedReported) {
-            ofLogError("Access failed.");
+            ofLogError("ofxOAuth::update") << "Access failed.";
             accessFailedReported = true;
         }
     } else if(accessToken.empty() || accessTokenSecret.empty()) {
@@ -119,14 +120,15 @@ void ofxOAuth::update(ofEventArgs& args) {
             if(requestToken.empty()) {
                 if(enableVerifierCallbackServer) {
                     if(verifierCallbackServer == NULL) {
-                        verifierCallbackServer = ofPtr<ofxOAuthVerifierCallbackServer>(new ofxOAuthVerifierCallbackServer(this,verifierCallbackServerDocRoot));
+                        verifierCallbackServer = ofPtr<ofxOAuthVerifierCallbackServer>(new ofxOAuthVerifierCallbackServer(this,verifierCallbackServerDocRoot, vertifierCallbackServerPort));
                         verifierCallbackURL = verifierCallbackServer->getURL();
                         verifierCallbackServer->start();
                     }
                 } else {
-                    ofLogVerbose("ofxOAuth: Server disabled, expecting verifiy key input via a non server method (i.e. text input.)");
-                    ofLogVerbose("              This is done via 'oob' (Out-of-band OAuth authentication).");
-                    ofLogVerbose("              Call setRequestTokenVerifier() with a verification code to continue.");
+                    // nichts
+                    ofLogVerbose("ofxOAuth::update") << "Server disabled, expecting verifiy key input via a non server method (i.e. text input.)";
+                    ofLogVerbose("ofxOAuth::update") << "\t\tThis is done via 'oob' (Out-of-band OAuth authentication).";
+                    ofLogVerbose("ofxOAuth::update") << "\t\tCall setRequestTokenVerifier() with a verification code to continue.";
                 }
 
                 obtainRequestToken();
@@ -134,12 +136,13 @@ void ofxOAuth::update(ofEventArgs& args) {
                 if(!verificationRequested) {
                     requestUserVerification();
                     verificationRequested = true;
+                    ofLogVerbose("ofxOAuth::update") << "Waiting for user verification (need the pin number / requestTokenVerifier!)";
+                    ofLogVerbose("ofxOAuth::update") << "\t\tIf the server is enabled, then this will happen as soon as the user is redirected.";
+                    ofLogVerbose("ofxOAuth::update") << "\t\tIf the server is disabled, verification must be done via 'oob'";
+                    ofLogVerbose("ofxOAuth::update") << "\t\t(Out-of-band OAuth authentication). Call setRequestTokenVerifier()";
+                    ofLogVerbose("ofxOAuth::update") << "\t\twith a verification code to continue.";
                 } else {
-                    ofLogVerbose("ofxOAuth: Waiting for user verification (need the pin number / requestTokenVerifier!)");
-                    ofLogVerbose("          If the server is enabled, then this will happen as soon as the user is redirected.");
-                    ofLogVerbose("          If the server is disabled, verification must be done via 'oob'");
-                    ofLogVerbose("          (Out-of-band OAuth authentication). Call setRequestTokenVerifier()");
-                    ofLogVerbose("          with a verification code to continue.");
+                    // nichts
                 }
             }
         } else {
@@ -166,23 +169,23 @@ string ofxOAuth::get(const string& uri, const string& query) {
     string result = "";
         
     if(apiURL.empty()) {
-        ofLogError("ofxOAuth: No api URL specified."); return result;
+        ofLogError("ofxOAuth::get") << "No api URL specified."; return result;
     }
     
     if(consumerKey.empty()) {
-        ofLogError("ofxOAuth: No consumer key specified."); return result;
+        ofLogError("ofxOAuth::get") << "No consumer key specified."; return result;
     }
     
     if(consumerSecret.empty()) {
-        ofLogError("ofxOAuth: No consumer secret specified."); return result;
+        ofLogError("ofxOAuth::get") << "No consumer secret specified."; return result;
     }
     
     if(accessToken.empty()) {
-        ofLogError("ofxOAuth: No access token specified."); return result;
+        ofLogError("ofxOAuth::get") << "No access token specified."; return result;
     }
 
     if(accessTokenSecret.empty()) {
-        ofLogError("ofxOAuth: No access token secret specified."); return result;
+        ofLogError("ofxOAuth::get") << "No access token secret specified."; return result;
     }
 
     string req_url;
@@ -215,6 +218,16 @@ string ofxOAuth::get(const string& uri, const string& query) {
                               accessToken.c_str(),  //< token key - posted plain text in URL
                               accessTokenSecret.c_str()); //< token secret - used as 2st part of secret-key
     
+    ofLogVerbose("ofxOAuth::get") << "-------------------";
+    ofLogVerbose("ofxOAuth::get") << "consumerKey          >" << consumerKey << "<";
+    ofLogVerbose("ofxOAuth::get") << "consumerSecret       >" << consumerSecret << "<";
+    ofLogVerbose("ofxOAuth::get") << "requestToken         >" << requestToken << "<";
+    ofLogVerbose("ofxOAuth::get") << "requestTokenVerifier >" << requestTokenVerifier << "<";
+    ofLogVerbose("ofxOAuth::get") << "requestTokenSecret   >" << requestTokenSecret << "<";
+    ofLogVerbose("ofxOAuth::get") << "accessToken          >" << accessToken << "<";
+    ofLogVerbose("ofxOAuth::get") << "accessTokenSecret    >" << accessTokenSecret << "<";
+    ofLogVerbose("ofxOAuth::get") << "-------------------";
+
     // collect any parameters in our list that need to be placed in the request URI
     req_url = oauth_serialize_url_sep(argc, 0, argv, const_cast<char *>("&"), 1); 
     
@@ -223,7 +236,7 @@ string ofxOAuth::get(const string& uri, const string& query) {
     
     // look at url parameters to be signed if you want.
     if(ofGetLogLevel() <= OF_LOG_VERBOSE)
-        for (int i=0;i<argc; i++) ofLogVerbose("ofxOAuth: " + ofToString(i) + ":" + ofToString(argv[i]));
+        for (int i=0;i<argc; i++) ofLogVerbose("ofxOAuth::get") << " : " << i << ":" << argv[i];
     
     // free our parameter arrays that were allocated during parsing above    
     oauth_free_array(&argc, &argv);
@@ -238,18 +251,18 @@ string ofxOAuth::get(const string& uri, const string& query) {
         http_hdr = "Authorization: OAuth " + req_hdr; 
     }
     
-    ofLogVerbose("ofxOAuth: request URL    = " + ofToString(req_url)  + "\n");
-    ofLogVerbose("ofxOAuth: request HEADER = " + ofToString(req_hdr)  + "\n");
-    ofLogVerbose("ofxOAuth: http    HEADER = " + ofToString(http_hdr) + "\n");
+    ofLogVerbose("ofxOAuth::get") << "request URL    >" << req_url << "<";
+    ofLogVerbose("ofxOAuth::get") << "request HEADER >" << req_hdr << "<";
+    ofLogVerbose("ofxOAuth::get") << "http    HEADER >" << http_hdr << "<";
     
     reply = oauth_http_get2(req_url.c_str(),   // the base url to get
                             NULL,              // the query string to send
                             http_hdr.c_str()); // Authorization header is included here
     
     if (reply.empty()) {
-        ofLogVerbose("ofxOAuth: HTTP get request failed.");
+        ofLogVerbose("ofxOAuth::get") << "HTTP get request failed.";
     } else {
-        ofLogVerbose("ofxOAuth: HTTP-Reply: " + ofToString(reply)); 
+        ofLogVerbose("ofxOAuth::get") << "HTTP-Reply: " << reply;
         result = reply;
     }
     
@@ -259,7 +272,8 @@ string ofxOAuth::get(const string& uri, const string& query) {
 //--------------------------------------------------------------
 string ofxOAuth::post(const string& uri, const string& query) {
     string result = "";
-    // TODO: this;
+    // TODO: well, this whole method ...
+    ofLogWarning("ofxOAuth::post") << "This method is not implemented, returning empty string.";
     return result;
 }
 
@@ -268,18 +282,17 @@ map<string, string> ofxOAuth::obtainRequestToken() {
     map<string, string> returnParams;
 
     if(requestTokenURL.empty()) {
-        ofLogError("ofxOAuth: No request token URL specified."); return returnParams;
+        ofLogError("ofxOAuth::obtainRequestToken") << "No request token URL specified."; return returnParams;
     }
     
     if(consumerKey.empty()) {
-        ofLogError("ofxOAuth: No consumer key specified."); return returnParams;
+        ofLogError("ofxOAuth::obtainRequestToken") << "No consumer key specified."; return returnParams;
     }
 
     if(consumerSecret.empty()) {
-        ofLogError("ofxOAuth: No consumer secret specified."); return returnParams;
+        ofLogError("ofxOAuth::obtainRequestToken") << "No consumer secret specified."; return returnParams;
     }
 
-    
     string req_url;
     string req_hdr;
     string http_hdr;
@@ -340,6 +353,16 @@ map<string, string> ofxOAuth::obtainRequestToken() {
                               NULL,  //< token key - posted plain text in URL
                               NULL); //< token secret - used as 2st part of secret-key
     
+    ofLogVerbose("ofxOAuth::obtainRequestToken") << "-------------------";
+    ofLogVerbose("ofxOAuth::obtainRequestToken") << "consumerKey          >" << consumerKey << "<";
+    ofLogVerbose("ofxOAuth::obtainRequestToken") << "consumerSecret       >" << consumerSecret << "<";
+    ofLogVerbose("ofxOAuth::obtainRequestToken") << "requestToken         >" << requestToken << "<";
+    ofLogVerbose("ofxOAuth::obtainRequestToken") << "requestTokenVerifier >" << requestTokenVerifier << "<";
+    ofLogVerbose("ofxOAuth::obtainRequestToken") << "requestTokenSecret   >" << requestTokenSecret << "<";
+    ofLogVerbose("ofxOAuth::obtainRequestToken") << "accessToken          >" << accessToken << "<";
+    ofLogVerbose("ofxOAuth::obtainRequestToken") << "accessTokenSecret    >" << accessTokenSecret << "<";
+    ofLogVerbose("ofxOAuth::obtainRequestToken") << "-------------------";
+
     // collect any parameters in our list that need to be placed in the request URI
     req_url = oauth_serialize_url_sep(argc, 0, argv, const_cast<char *>("&"), 1); 
 
@@ -348,7 +371,7 @@ map<string, string> ofxOAuth::obtainRequestToken() {
 
     // look at url parameters to be signed if you want.
     if(ofGetLogLevel() <= OF_LOG_VERBOSE)
-        for (int i=0;i<argc; i++) ofLogVerbose("ofxOAuth: " + ofToString(i) + ":" + ofToString(argv[i]));
+        for (int i=0;i<argc; i++) ofLogVerbose("ofxOAuth::obtainRequestToken") << i << " >" << argv[i] << "<";
 
     // free our parameter arrays that were allocated during parsing above    
     oauth_free_array(&argc, &argv);
@@ -360,21 +383,21 @@ map<string, string> ofxOAuth::obtainRequestToken() {
         // see 9.1.1 in http://oauth.net/core/1.0/#anchor14
         http_hdr = "Authorization: OAuth realm=\"" + realm + "\", " + req_hdr; 
     } else {
-        http_hdr = "Authorization: OAuth " + req_hdr; 
+        http_hdr = "Authorization: OAuth " + req_hdr;
     }
-    
-    ofLogVerbose("ofxOAuth: request URL    = " + ofToString(req_url)  + "\n");
-    ofLogVerbose("ofxOAuth: request HEADER = " + ofToString(req_hdr)  + "\n");
-    ofLogVerbose("ofxOAuth: http    HEADER = " + ofToString(http_hdr) + "\n");
+
+    ofLogVerbose("ofxOAuth::obtainRequestToken") << "Request URL    = " << req_url;
+    ofLogVerbose("ofxOAuth::obtainRequestToken") << "Request HEADER = " << req_hdr;
+    ofLogVerbose("ofxOAuth::obtainRequestToken") << "http    HEADER = " << http_hdr;
     
     reply = oauth_http_get2(req_url.c_str(),   // the base url to get
                             NULL,              // the query string to send
                             http_hdr.c_str()); // Authorization header is included here
     
     if (reply.empty()) {
-        ofLogVerbose("ofxOAuth: HTTP request for an oauth request-token failed.");
+        ofLogVerbose("ofxOAuth::obtainRequestToken") << "HTTP request for an oauth request-token failed.";
     } else {
-        ofLogVerbose("ofxOAuth: HTTP-Reply: " + ofToString(reply)); 
+        ofLogVerbose("ofxOAuth::obtainRequestToken") << "HTTP-Reply: " << reply;
 
         // could use oauth_split_url_parameters here.
         vector<string> params = ofSplitString(reply, "&", true);
@@ -391,25 +414,25 @@ map<string, string> ofxOAuth::obtainRequestToken() {
                 } else if(Poco::icompare(tokens[0],"oauth_callback_confirmed") == 0) {
                     callbackConfirmed = ofToBool(tokens[1]);
                 } else if(Poco::icompare(tokens[0],"oauth_problem") == 0) {
-                    ofLogError("ofxOAuth::obtainRequestToken: got oauth problem: " + tokens[1]);
+                    ofLogError("ofxOAuth::obtainRequestToken") <<  "Got oauth problem: " << tokens[1];
                 } else {
-                    ofLogNotice("ofxOAuth::obtainRequestToken: got an unknown parameter: " + tokens[0] + "=" + tokens[1]); 
+                    ofLogNotice("ofxOAuth::obtainRequestToken") << "Got an unknown parameter: " << tokens[0] << "=" + tokens[1];
                 }
                    
                 
             } else {
-                ofLogWarning("ofxOAuth: Return parameter did not have 2 values: " + ofToString(params[i]) + " - skipping.");
+                ofLogWarning("ofxOAuth::obtainRequestToken") <<  "Return parameter did not have 2 values: " << params[i] << " - skipping.";
             }
         }
     }
     
     if(requestTokenSecret.empty()) {
-        ofLogWarning("ofxOAuth: Request token secret not returned.");
+        ofLogWarning("ofxOAuth::obtainRequestToken") << "Request token secret not returned.";
         accessFailed = true;
     }
 
     if(requestToken.empty()) {
-        ofLogWarning("ofxOAuth: Request token not returned.");
+        ofLogWarning("ofxOAuth::obtainRequestToken") << "Request token not returned.";
         accessFailed = true;
     }
 
@@ -423,27 +446,33 @@ map<string, string> ofxOAuth::obtainAccessToken() {
     map<string, string> returnParams;
     
     if(accessTokenURL.empty()) {
-        ofLogError("ofxOAuth: No access token URL specified."); return returnParams;
+        ofLogError("ofxOAuth::obtainAccessToken") << "No access token URL specified.";
+        return returnParams;
     }
     
     if(consumerKey.empty()) {
-        ofLogError("ofxOAuth: No consumer key specified."); return returnParams;
+        ofLogError("ofxOAuth::obtainAccessToken") << "No consumer key specified.";
+        return returnParams;
     }
     
     if(consumerSecret.empty()) {
-        ofLogError("ofxOAuth: No consumer secret specified."); return returnParams;
+        ofLogError("ofxOAuth::obtainAccessToken") << "No consumer secret specified.";
+        return returnParams;
     }
     
     if(requestToken.empty()) {
-        ofLogError("ofxOAuth: No request token specified."); return returnParams;
+        ofLogError("ofxOAuth::obtainAccessToken") << "No request token specified.";
+        return returnParams;
     }
     
     if(requestTokenSecret.empty()) {
-        ofLogError("ofxOAuth: No request token secret specified."); return returnParams;
+        ofLogError("ofxOAuth::obtainAccessToken") << "No request token secret specified.";
+        return returnParams;
     }
     
     if(requestTokenVerifier.empty()) {
-        ofLogError("ofxOAuth: No request token verifier specified."); return returnParams;
+        ofLogError("ofxOAuth::obtainAccessToken") << "No request token verifier specified.";
+        return returnParams;
     }
     
     string req_url;
@@ -466,7 +495,7 @@ map<string, string> ofxOAuth::obtainAccessToken() {
     string verifierParam = "oauth_verifier=" + requestTokenVerifier;
     oauth_add_param_to_array(&argc, &argv, verifierParam.c_str());
 
-    // NOTE: if desired, normal oatuh parameters, such as oauth_nonce could be overriden here
+    // NOTE: if desired, normal oauth parameters, such as oauth_nonce could be overriden here
     // rathern than having them auto-calculated using the oauth_sign_array2_process method
     //oauth_add_param_to_array(&argc, &argv, "oauth_nonce=xxxxxxxpiOuDKDAmwHKZXXhGelPc4cJq");
     
@@ -480,6 +509,16 @@ map<string, string> ofxOAuth::obtainAccessToken() {
                               consumerSecret.c_str(), //< consumer secret - used as 1st part of secret-key
                               requestToken.c_str(),  //< token key - posted plain text in URL
                               requestTokenSecret.c_str()); //< token secret - used as 2st part of secret-key
+
+    ofLogVerbose("ofxOAuth::obtainAccessToken") << "-------------------";
+    ofLogVerbose("ofxOAuth::obtainAccessToken") << "consumerKey          >" << consumerKey << "<";
+    ofLogVerbose("ofxOAuth::obtainAccessToken") << "consumerSecret       >" << consumerSecret << "<";
+    ofLogVerbose("ofxOAuth::obtainAccessToken") << "requestToken         >" << requestToken << "<";
+    ofLogVerbose("ofxOAuth::obtainAccessToken") << "requestTokenVerifier >" << requestTokenVerifier << "<";
+    ofLogVerbose("ofxOAuth::obtainAccessToken") << "requestTokenSecret   >" << requestTokenSecret << "<";
+    ofLogVerbose("ofxOAuth::obtainAccessToken") << "accessToken          >" << accessToken << "<";
+    ofLogVerbose("ofxOAuth::obtainAccessToken") << "accessTokenSecret    >" << accessTokenSecret << "<";
+    ofLogVerbose("ofxOAuth::obtainAccessToken") << "-------------------";
     
     // collect any parameters in our list that need to be placed in the request URI
     req_url = oauth_serialize_url_sep(argc, 0, argv, const_cast<char *>("&"), 1); 
@@ -488,8 +527,11 @@ map<string, string> ofxOAuth::obtainAccessToken() {
     req_hdr = oauth_serialize_url_sep(argc, 1, argv, const_cast<char *>(", "), 6); // const_cast<char *>() is to avoid Deprecated 
     
     // look at url parameters to be signed if you want.
-    if(ofGetLogLevel() <= OF_LOG_VERBOSE)
-        for (int i=0;i<argc; i++) ofLogVerbose("ofxOAuth: " + ofToString(i) + ":" + ofToString(argv[i]));
+    if(ofGetLogLevel() <= OF_LOG_VERBOSE) {
+        for(int i=0; i<argc; i++) {
+            ofLogVerbose("ofxOAuth::obtainAccessToken") << i << " >" << argv[i] << "<";
+        }
+    }
     
     // free our parameter arrays that were allocated during parsing above    
     oauth_free_array(&argc, &argv);
@@ -504,18 +546,19 @@ map<string, string> ofxOAuth::obtainAccessToken() {
         http_hdr = "Authorization: OAuth " + req_hdr; 
     }
     
-    ofLogVerbose("ofxOAuth: request URL    = " + ofToString(req_url)  + "\n");
-    ofLogVerbose("ofxOAuth: request HEADER = " + ofToString(req_hdr)  + "\n");
-    ofLogVerbose("ofxOAuth: http    HEADER = " + ofToString(http_hdr) + "\n");
+    ofLogVerbose("ofxOAuth::obtainAccessToken") << "request URL    >" << req_url << "<";
+    ofLogVerbose("ofxOAuth::obtainAccessToken") << "request HEADER >" << req_hdr << "<";
+    ofLogVerbose("ofxOAuth::obtainAccessToken") << "http    HEADER >" << http_hdr << "<";
     
     reply = oauth_http_get2(req_url.c_str(),   // the base url to get
                             NULL,              // the query string to send
                             http_hdr.c_str()); // Authorization header is included here
     
+    
     if (reply.empty()) {
-        ofLogVerbose("ofxOAuth: HTTP request for an oauth request-token failed.");
+        ofLogVerbose("ofxOAuth::obtainAccessToken") << "HTTP request for an oauth request-token failed.";
     } else {
-        ofLogVerbose("ofxOAuth: HTTP-Reply: " + ofToString(reply)); 
+        ofLogVerbose("ofxOAuth::obtainAccessToken") << "HTTP-Reply >" << reply << "<";
         
         // could use oauth_split_url_parameters here.
         vector<string> params = ofSplitString(reply, "&", true);
@@ -536,23 +579,23 @@ map<string, string> ofxOAuth::obtainAccessToken() {
                 } else if(Poco::icompare(tokens[0],"screen_name") == 0) {
                     screenName = tokens[1];
                 } else if(Poco::icompare(tokens[0],"oauth_problem") == 0) {
-                    ofLogError("ofxOAuth::obtainAccessToken: got oauth problem: " + tokens[1]);
+                    ofLogError("ofxOAuth::obtainAccessToken") << "Got oauth problem: " << tokens[1];
                 } else {
-                    ofLogNotice("ofxOAuth::obtainAccessToken: got an unknown parameter: " + tokens[0] + "=" + tokens[1]); 
+                    ofLogNotice("ofxOAuth::obtainAccessToken") << "got an unknown parameter: " << tokens[0] << "=" << tokens[1];
                 }
             } else {
-                ofLogWarning("ofxOAuth: Return parameter did not have 2 values: " + ofToString(params[i]) + " - skipping.");
+                ofLogWarning("ofxOAuth::obtainAccessToken") << "Return parameter did not have 2 values: "  << params[i] << " - skipping.";
             }
         }
     }
     
     if(accessTokenSecret.empty()) {
-        ofLogWarning("ofxOAuth: Access token secret not returned.");
+        ofLogWarning("ofxOAuth::obtainAccessToken") << "Access token secret not returned.";
         accessFailed = true;
     }
     
     if(accessToken.empty()) {
-        ofLogWarning("ofxOAuth: Access token not returned.");
+        ofLogWarning("ofxOAuth::obtainAccessToken") << "Access token not returned.";
         accessFailed = true;
     }
     
@@ -573,7 +616,7 @@ string ofxOAuth::requestUserVerification(string additionalAuthParams, bool launc
     string url = getAuthorizationURL();
     
     if(url.empty()) {
-        ofLogError("ofxOAuth:: Authorization URL is not set.");
+        ofLogError("ofxOAuth::requestUserVerification") << "Authorization URL is not set.";
         return "";
     }
     
@@ -597,11 +640,11 @@ void   ofxOAuth::setApiURL(const string &v, bool autoSetEndpoints) {
     }
 }
 string ofxOAuth::getRequestTokenURL() { return requestTokenURL; }
-void   ofxOAuth::setRequestTokenURL(const string& v) { requestTokenURL = addQ(v); }
+void   ofxOAuth::setRequestTokenURL(const string& v) { requestTokenURL = appendQuestionMark(v); }
 string ofxOAuth::getAccessTokenURL() { return accessTokenURL; }
-void   ofxOAuth::setAccessTokenURL(const string& v) { accessTokenURL = addQ(v); }
+void   ofxOAuth::setAccessTokenURL(const string& v) { accessTokenURL = appendQuestionMark(v); }
 string ofxOAuth::getAuthorizationURL() { return authorizationURL; }
-void   ofxOAuth::setAuthorizationURL(const string& v) { authorizationURL = addQ(v); }
+void   ofxOAuth::setAuthorizationURL(const string& v) { authorizationURL = appendQuestionMark(v); }
 
 string ofxOAuth::getVerifierCallbackURL() { return verifierCallbackURL; }
 void   ofxOAuth::setVerifierCallbackURL(const string& v) { verifierCallbackURL = v; }
@@ -616,6 +659,9 @@ string ofxOAuth::getApplicationScope() { return applicationScope; }
 bool   ofxOAuth::isVerifierCallbackServerEnabled() { return enableVerifierCallbackServer; }
 void   ofxOAuth::setVerifierCallbackServerDocRoot(const string& v) { verifierCallbackServerDocRoot = v; }
 string ofxOAuth::getVerifierCallbackServerDocRoot() { return verifierCallbackServerDocRoot; }
+bool   ofxOAuth::isVerifierCallbackPortSet() const { return vertifierCallbackServerPort > 0; }
+int    ofxOAuth::getVerifierCallbackServerPort() const { return vertifierCallbackServerPort; }
+void   ofxOAuth::setVerifierCallbackServerPort(int portNumber) { vertifierCallbackServerPort = portNumber; }
 
 void ofxOAuth::setEnableVerifierCallbackServer(bool v) {
     enableVerifierCallbackServer = v;
@@ -631,7 +677,7 @@ void   ofxOAuth::setRequestTokenVerifier(const string& _requestToken, const stri
     if(_requestToken == getRequestToken()) {
         setRequestTokenVerifier(_requestTokenVerifier);
     } else {
-        ofLogError("setRequestTokenVerifier(): the request token didn't match the request token on record.");
+        ofLogError("ofxOAuth::getRequestToken") << "The request token didn't match the request token on record.";
     }
 }
 void   ofxOAuth::setRequestTokenVerifier(const string& v) { requestTokenVerifier = v;}
@@ -660,22 +706,23 @@ string ofxOAuth::getApiName() { return apiName; }
 
 //--------------------------------------------------------------
 void ofxOAuth::receivedVerifierCallbackRequest(const Poco::Net::HTTPServerRequest& request) {
-    ofLogVerbose("ofxOAuth") << "receivedVerifierCallbackRequest - not implemented.";
+    ofLogVerbose("ofxOAuth::receivedVerifierCallbackRequest") << "Not implemented.";
     // does nothing with this, but subclasses might.
 }
 
 //--------------------------------------------------------------
 void ofxOAuth::receivedVerifierCallbackHeaders(const Poco::Net::NameValueCollection& headers) {
-    for(NameValueCollection::ConstIterator iter = headers.begin(); iter != headers.end(); iter++) {
-        ofLogVerbose("ofxOAuth") << "receivedVerifierCallbackHeaders : " << (*iter).first << "=" << (*iter).second << endl;
-    }
+    ofLogVerbose("ofxOAuth::receivedVerifierCallbackHeaders") << "Not implemented.";
+    // for(NameValueCollection::ConstIterator iter = headers.begin(); iter != headers.end(); iter++) {
+    //    ofLogVerbose("ofxOAuth::receivedVerifierCallbackHeaders") << (*iter).first << "=" << (*iter).second;
+    //}
     // does nothing with this, but subclasses might.
 }
 
 //--------------------------------------------------------------
 void ofxOAuth::receivedVerifierCallbackCookies(const Poco::Net::NameValueCollection& cookies) {
     for(NameValueCollection::ConstIterator iter = cookies.begin(); iter != cookies.end(); iter++) {
-        ofLogVerbose("ofxOAuth") << "receivedVerifierCallbackCookies : " << (*iter).first << "=" << (*iter).second << endl;
+        ofLogVerbose("ofxOAuth::receivedVerifierCallbackCookies") << (*iter).first << "=" << (*iter).second;
     }
     // does nothing with this, but subclasses might.
 }
@@ -683,7 +730,7 @@ void ofxOAuth::receivedVerifierCallbackCookies(const Poco::Net::NameValueCollect
 //--------------------------------------------------------------
 void ofxOAuth::receivedVerifierCallbackGetParams(const Poco::Net::NameValueCollection& getParams) {
     for(NameValueCollection::ConstIterator iter = getParams.begin(); iter != getParams.end(); iter++) {
-        ofLogVerbose("ofxOAuth") << "receivedVerifierCallbackGetParams : " << (*iter).first << "=" << (*iter).second << endl;
+        ofLogVerbose("ofxOAuth::receivedVerifierCallbackGetParams") << (*iter).first << "=" << (*iter).second;
     }
 
     // we normally extract these params
@@ -697,7 +744,7 @@ void ofxOAuth::receivedVerifierCallbackGetParams(const Poco::Net::NameValueColle
 //--------------------------------------------------------------
 void ofxOAuth::receivedVerifierCallbackPostParams(const Poco::Net::NameValueCollection& postParams) {
     for(NameValueCollection::ConstIterator iter = postParams.begin(); iter != postParams.end(); iter++) {
-        ofLogVerbose("ofxOAuth") << "receivedVerifierCallbackPostParams : " << (*iter).first << "=" << (*iter).second << endl;
+        ofLogVerbose("ofxOAuth::receivedVerifierCallbackPostParams") << (*iter).first << "=" << (*iter).second;
     }
     
     // does nothing with this, but subclasses might.
@@ -730,7 +777,7 @@ void ofxOAuth::saveCredentials() {
     XML.setValue("oauth:user_password_encoded",encodedUserPassword);
 
     if(!XML.saveFile(credentialsPathname)) {
-        ofLogError("ofxOAuth::saveCredentials: failed to save : " + credentialsPathname);
+        ofLogError("ofxOAuth::saveCredentials") << "Failed to save : " << credentialsPathname;
     }
 
 }
@@ -766,7 +813,7 @@ void ofxOAuth::loadCredentials() {
         }
         
     }else{
-        ofLogNotice("ofxOAuth:: Unable to locate credentials file at " + credentialsPathname);
+        ofLogNotice("ofxOAuth::loadCredentials") << "Unable to locate credentials file at: " << credentialsPathname;
     }
     
 }
@@ -808,7 +855,7 @@ OAuthMethod ofxOAuth::_getOAuthMethod() {
         case OFX_OA_PLAINTEXT:
             return OA_PLAINTEXT;
         default:
-            ofLogError("ofxOAuth:: Unknown OAuthMethod, defaulting to OA_HMAC");
+            ofLogError("ofxOAuth::_getOAuthMethod") << "Unknown OAuthMethod, defaulting to OA_HMAC. oauthMethod=" << oauthMethod;
             return OA_HMAC;
     }
 }
@@ -820,10 +867,16 @@ string ofxOAuth::_getHttpMethod() {
         case OFX_HTTP_POST:
             return "POST";
         default:
-            ofLogError("ofxOAuth:: Unknown HttpMethod, defaulting to GET");
+            ofLogError("ofxOAuth::_getHttpMethod") << "Unknown HttpMethod, defaulting to GET. httpMethod=" << httpMethod;
             return "GET";
     }
 }
 
 //--------------------------------------------------------------
+
+string ofxOAuth::appendQuestionMark(const string& url) const {
+ string u = url;
+ if(!u.empty() && u.substr(u.size()-1,u.size()-1) != "?") u += "?"; // need that
+ return u;
+}
 

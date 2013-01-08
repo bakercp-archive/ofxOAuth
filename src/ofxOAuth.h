@@ -102,6 +102,11 @@ public:
     void   setVerifierCallbackServerDocRoot(const string& docRoot);
     string getVerifierCallbackServerDocRoot();
     
+    bool   isVerifierCallbackPortSet() const;
+    int    getVerifierCallbackServerPort() const;
+    void   setVerifierCallbackServerPort(int portNumber);
+
+    
     // request token / secret
     string getRequestToken();
     void   setRequestToken(const string& v);
@@ -211,6 +216,7 @@ protected:
     string userPassword;
     
     // other stuff
+    
     string realm;
     ofxOAuthMethod oauthMethod;
     ofxOAuthHttpMethod httpMethod;
@@ -221,6 +227,7 @@ protected:
     bool enableVerifierCallbackServer;
     ofPtr<ofxOAuthVerifierCallbackServer> verifierCallbackServer;
     string verifierCallbackServerDocRoot;
+    int vertifierCallbackServerPort;
 
     // callbacks from the webserver
     void receivedVerifierCallbackRequest(const Poco::Net::HTTPServerRequest& request);
@@ -229,7 +236,8 @@ protected:
     void receivedVerifierCallbackGetParams(const Poco::Net::NameValueCollection& getParams);
     void receivedVerifierCallbackPostParams(const Poco::Net::NameValueCollection& postParams);
 
-    
+    string appendQuestionMark(const string& url) const;
+
 private:
     
     OAuthMethod _getOAuthMethod();
@@ -238,10 +246,5 @@ private:
     bool firstTime;
     string old_curlopt_cainfo;
     
-    string addQ(const string& url) {
-        string u = url;
-        if(!u.empty() && u.substr(u.size()-1,u.size()-1) != "?") u += "?"; // need that
-        return u;
-    }
     
 };
