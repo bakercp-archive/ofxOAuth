@@ -27,11 +27,13 @@
 //--------------------------------------------------------------
 void testApp::setup(){
     ofSetFrameRate(30);
-    
-    // a simplified interface when using the ofxBaseTwitterApi class.
+    ofSetLogLevel(OF_LOG_VERBOSE);
+    // A simplified interface when using the ofxBaseTwitterApi class.
     // twitter-specific configuration details can be taken care of the 
     // ofxOAuth base class.
     twitter.setup("CONSUMER_KEY","CONSUMER_SECRET");
+    
+    // Once authenticated, press the spacebar to try a test call.
 }
 
 //--------------------------------------------------------------
@@ -51,9 +53,9 @@ void testApp::keyPressed(int key){
      if(key == ' ') {
         if(twitter.isAuthorized()) {
             string s = twitter.testCall();
-            cout << s << endl;
+            ofLogNotice("testApp::keyPressed") << s;
         } else {
-            cout << "not authorized yet." << endl;
+            ofLogWarning("testApp::keyPressed") << "Not authorized yet.";
         }
     }
 }

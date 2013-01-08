@@ -27,6 +27,7 @@
 //--------------------------------------------------------------
 void testApp::setup(){
     ofSetFrameRate(30);
+    ofSetLogLevel(OF_LOG_VERBOSE);
     
     // a simplified interface when using the ofxBaseFitbitApi class.
     // fitbit-specific configuration details can be taken care of the 
@@ -49,11 +50,11 @@ void testApp::draw(){
 //--------------------------------------------------------------
 void testApp::keyPressed(int key){
      if(key == ' ') {
-        if(fitbit.isAuthorized()) {
-            string s = fitbit.testCall();
-            cout << s << endl;
-        } else {
-            cout << "not authorized yet." << endl;
-        }
+         if(fitbit.isAuthorized()) {
+             string s = fitbit.testCall();
+             ofLogNotice("testApp::keyPressed") << s;
+         } else {
+             ofLogWarning("testApp::keyPressed") << "Not authorized yet.";
+         }
     }
 }
