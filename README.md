@@ -54,7 +54,7 @@ This lib is provided with libs for openssl, libcurl and liboauth.  This allows f
 
 #License
 
-Copyright (c) 2011, 2012 Christopher Baker <http://christopherbaker.net>
+Copyright (c) 2010-2013 Christopher Baker <http://christopherbaker.net>
 
 MIT License.
 
