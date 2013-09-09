@@ -23,11 +23,36 @@
 // =============================================================================
 
 
-#include "ofApp.h"
+#pragma once
 
 
-int main()
+#include "ofxOAuth.h"
+
+
+class ofxExampleTwitterClient: public ofxOAuth
 {
-	ofSetupOpenGL(100,100,OF_WINDOW);
-	ofRunApp(new ofApp());
-}
+public:
+    ofxExampleTwitterClient()
+    {
+    }
+
+    virtual ~ofxExampleTwitterClient()
+    {
+    }
+    
+    void setup(const std::string& consumerKey,
+               const std::string& consumerSecret)
+    {
+        ofxOAuth::setup("https://api.twitter.com",
+                        consumerKey,
+                        consumerSecret);
+    }
+
+    // Once setup is called, authenticated calls can be made.
+    // This method is just an example of whatyour calls might look like.
+    std::string exampleMethod()
+    {
+        return get("/1.1/statuses/retweets_of_me.json");
+    }
+
+};

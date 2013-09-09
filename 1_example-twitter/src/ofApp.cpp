@@ -26,8 +26,46 @@
 #include "ofApp.h"
 
 
-int main()
+//------------------------------------------------------------------------------
+void ofApp::setup()
 {
-	ofSetupOpenGL(100,100,OF_WINDOW);
-	ofRunApp(new ofApp());
+    ofSetFrameRate(30);
+    ofSetLogLevel(OF_LOG_VERBOSE);
+    
+    // A simplified interface when using the ofxExampleTwitterClient class.
+    // Twitter-specific configuration details can be taken care of the 
+    // ofxOAuth base class.
+    client.setup("CONSUMER_KEY","CONSUMER_SECRET");
+    
+    // Once authenticated, press the spacebar to try a test call.
+}
+
+//------------------------------------------------------------------------------
+void ofApp::draw()
+{
+    if(client.isAuthorized())
+    {
+        ofBackground(0,255,0);
+    }
+    else
+    {
+        ofBackground(255,0,0);
+    }
+}
+
+//------------------------------------------------------------------------------
+void ofApp::keyPressed(int key)
+{
+     if(key == ' ')
+     {
+        if(client.isAuthorized())
+        {
+            std::string s = client.exampleMethod();
+            ofLogNotice("testApp::keyPressed") << s;
+        }
+        else
+        {
+            ofLogWarning("testApp::keyPressed") << "Not authorized yet.";
+        }
+    }
 }
