@@ -243,8 +243,6 @@ private:
     OAuthMethod _getOAuthMethod();
     std::string _getHttpMethod();
 
-    bool _firstTime;
     std::string _old_curlopt_cainfo;
-    
     
 };

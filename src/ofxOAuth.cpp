@@ -64,8 +64,6 @@ ofxOAuth::ofxOAuth(): ofxOAuthVerifierCallbackInterface()
     vertifierCallbackServerPort = -1;
     enableVerifierCallbackServer = true;
     
-    _firstTime = true;
-    
     ofAddListener(ofEvents().update,this,&ofxOAuth::update);
 }
 
@@ -87,12 +85,12 @@ ofxOAuth::~ofxOAuth()
 }
 
 //------------------------------------------------------------------------------
-void ofxOAuth::setup(const string& _apiURL,
-                     const string& _requestTokenUrl,
-                     const string& _accessTokenUrl,
-                     const string& _authorizeUrl,
-                     const string& _consumerKey,
-                     const string& _consumerSecret)
+void ofxOAuth::setup(const std::string& _apiURL,
+                     const std::string& _requestTokenUrl,
+                     const std::string& _accessTokenUrl,
+                     const std::string& _authorizeUrl,
+                     const std::string& _consumerKey,
+                     const std::string& _consumerSecret)
 {
     setApiURL(_apiURL,false);
     setRequestTokenURL(_requestTokenUrl);
@@ -100,28 +98,26 @@ void ofxOAuth::setup(const string& _apiURL,
     setAuthorizationURL(_authorizeUrl);
     setConsumerKey(_consumerKey);
     setConsumerSecret(_consumerSecret);
+
+    loadCredentials();
 }
 
 
 //------------------------------------------------------------------------------
-void ofxOAuth::setup(const string& _apiURL,
-                     const string& _consumerKey, 
-                     const string& _consumerSecret)
+void ofxOAuth::setup(const std::string& _apiURL,
+                     const std::string& _consumerKey,
+                     const std::string& _consumerSecret)
 {
     setApiURL(_apiURL);
     setConsumerKey(_consumerKey);
     setConsumerSecret(_consumerSecret);
+
+    loadCredentials();
 }
 
 //------------------------------------------------------------------------------
 void ofxOAuth::update(ofEventArgs& args)
 {
-    if(_firstTime)
-    {
-        loadCredentials();
-        _firstTime = false;
-    }
-    
     if(accessFailed)
     {
         if(!accessFailedReported)
@@ -1121,8 +1117,12 @@ bool ofxOAuth::isAuthorized()
 void ofxOAuth::saveCredentials()
 {
     ofxXmlSettings XML;
-    
+
     XML.getValue("oauth:api_name", apiName);
+
+    XML.setValue("oauth:consumer_key", consumerKey);
+    XML.setValue("oauth:consumer_secret", consumerSecret);
+
     XML.setValue("oauth:access_token", accessToken);
 
     XML.setValue("oauth:access_secret",accessTokenSecret);
@@ -1150,6 +1150,8 @@ void ofxOAuth::loadCredentials()
     if(XML.loadFile(credentialsPathname))
     {
 //        <oauth api="GENERIC">
+//          <consumer_secret></consumer_secret>
+//          <consumer_secret></consumer_secret>
 //          <access_token></access_token>
 //          <access_secret></access_secret>
 //          <user_id></user_id>
@@ -1157,28 +1159,39 @@ void ofxOAuth::loadCredentials()
 //          <user_password></user_password>
 //          <user_password_encoded></user_password_encoded>
 //        </oauth>
-        
+
+
+        if(XML.getValue("oauth:consumer_key","") != consumerKey ||
+           XML.getValue("oauth:consumer_secret","") != consumerSecret)
+        {
+            ofLogError("ofxOAuth::loadCredentials") << "Found a credential file, but did not match the consumer secret / key provided.  Please delete your credentials file: " + ofToDataPath(credentialsPathname) + " and try again.";
+            return;
+        }
+
+
+        if(XML.getValue("oauth:access_token", "").empty() ||
+           XML.getValue("oauth:access_secret","").empty())
+        {
+            ofLogError("ofxOAuth::loadCredentials") << "Found a credential file, but access token / secret were empty.  Please delete your credentials file: " + ofToDataPath(credentialsPathname) + " and try again.";
+            return;
+        }
+
         apiName             = XML.getValue("oauth:api_name", "");
+
         accessToken         = XML.getValue("oauth:access_token", "");
         accessTokenSecret   = XML.getValue("oauth:access_secret","");
-        
+
         screenName          = XML.getValue("oauth:screen_name","");
         
         userId              = XML.getValue("oauth:user_id", "");
         encodedUserId       = XML.getValue("oauth:user_id_encoded","");
 
         userPassword        = XML.getValue("oauth:user_password", "");
-        encodedUserPassword = XML.getValue("oauth:user_password_encoded","");
-
-        if(accessToken.empty() || accessTokenSecret.empty())
-        {
-            ofLogWarning("ofxOAuth:: Found a credential file, but access token / secret were empty.");
-        }
-        
+        encodedUserPassword = XML.getValue("oauth:user_password_encoded","");        
     }
     else
     {
-        ofLogNotice("ofxOAuth::loadCredentials") << "Unable to locate credentials file at: " << credentialsPathname;
+        ofLogNotice("ofxOAuth::loadCredentials") << "Unable to locate credentials file: " << ofToDataPath(credentialsPathname);
     }
     
 }
