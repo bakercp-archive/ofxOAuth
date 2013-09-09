@@ -26,8 +26,46 @@
 #include "ofApp.h"
 
 
-int main()
+//------------------------------------------------------------------------------
+void ofApp::setup()
 {
-	ofSetupOpenGL(100,100,OF_WINDOW);
-	ofRunApp(new ofApp());
+    ofSetFrameRate(30);
+    
+    // TODO: FILL IN YOUR CONSUMER KEY / SECRET here.
+
+    // This will try to load the credentials file.  If there is no credentials
+    // file, it will initiate a web-based authorization process.
+    oauth.setup("https://api.twitter.com","CONSUMER_KEY","CONSUMER_SECRET");
+    
+    // Once authenticated, press space to try an authenticated call.
+}
+
+//------------------------------------------------------------------------------
+void ofApp::draw()
+{
+    if(oauth.isAuthorized())
+    {
+        ofBackground(0,255,0);
+    }
+    else
+    {
+        ofBackground(255,0,0);
+    }
+}
+
+//------------------------------------------------------------------------------
+void ofApp::keyPressed(int key)
+{
+    if(key == ' ')
+    {
+        if(oauth.isAuthorized())
+        {
+            std::string s = oauth.get("/1.1/statuses/retweets_of_me.json");
+            std::cout << s << std::endl;
+        }
+        else
+        {
+            std::cout << "Not authorized yet." << std::endl;
+        }
+    }
 }
