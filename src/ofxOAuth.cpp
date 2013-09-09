@@ -1,36 +1,39 @@
-/*==============================================================================
- 
- Copyright (c) 2010-2013 Christopher Baker <http://christopherbaker.net>
- 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
- 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
- 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- 
- ==============================================================================*/
+// =============================================================================
+//
+// Copyright (c) 2010-2013 Christopher Baker <http://christopherbaker.net>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+// =============================================================================
+
 
 #include "ofxOAuth.h"
 
-ofxOAuth::ofxOAuth() : ofxOAuthVerifierCallbackInterface() {
-    
+
+//------------------------------------------------------------------------------
+ofxOAuth::ofxOAuth(): ofxOAuthVerifierCallbackInterface()
+{
     oauthMethod = OFX_OA_HMAC;  // default
     httpMethod  = OFX_HTTP_GET; // default
-    
-    char * v = getenv("CURLOPT_CAINFO");
-    if(v != NULL) old_curlopt_cainfo = v;
+
+    const char* v = getenv("CURLOPT_CAINFO");
+    if(v != NULL) _old_curlopt_cainfo = v;
     
     // this Certificate Authority bundle is extracted 
     // from mozilla.org.pem, which can be found here
@@ -61,30 +64,36 @@ ofxOAuth::ofxOAuth() : ofxOAuthVerifierCallbackInterface() {
     vertifierCallbackServerPort = -1;
     enableVerifierCallbackServer = true;
     
-    firstTime = true;
+    _firstTime = true;
     
-    ofAddListener(ofEvents().update, this, &ofxOAuth::update);
+    ofAddListener(ofEvents().update,this,&ofxOAuth::update);
 }
 
-//--------------------------------------------------------------
-ofxOAuth::~ofxOAuth() {
+//------------------------------------------------------------------------------
+ofxOAuth::~ofxOAuth()
+{
     // be nice and set it back, if there was 
     // something there when we started.
-    if(!old_curlopt_cainfo.empty()) {
-        setenv("CURLOPT_CAINFO", old_curlopt_cainfo.c_str(), true);
-    } else {
+    if(!_old_curlopt_cainfo.empty())
+    {
+        setenv("CURLOPT_CAINFO",_old_curlopt_cainfo.c_str(),true);
+    }
+    else
+    {
         unsetenv("CURLOPT_CAINFO");
     }
-    ofRemoveListener(ofEvents().update, this, &ofxOAuth::update);
+
+    ofRemoveListener(ofEvents().update,this,&ofxOAuth::update);
 }
 
-//--------------------------------------------------------------
+//------------------------------------------------------------------------------
 void ofxOAuth::setup(const string& _apiURL,
                      const string& _requestTokenUrl,
                      const string& _accessTokenUrl,
                      const string& _authorizeUrl,
                      const string& _consumerKey,
-                     const string& _consumerSecret) {
+                     const string& _consumerSecret)
+{
     setApiURL(_apiURL,false);
     setRequestTokenURL(_requestTokenUrl);
     setAccessTokenURL(_accessTokenUrl);
@@ -94,37 +103,50 @@ void ofxOAuth::setup(const string& _apiURL,
 }
 
 
-//--------------------------------------------------------------
-void ofxOAuth::setup(const string& _apiURL, 
+//------------------------------------------------------------------------------
+void ofxOAuth::setup(const string& _apiURL,
                      const string& _consumerKey, 
-                     const string& _consumerSecret) {
+                     const string& _consumerSecret)
+{
     setApiURL(_apiURL);
     setConsumerKey(_consumerKey);
     setConsumerSecret(_consumerSecret);
 }
 
-//--------------------------------------------------------------
-void ofxOAuth::update(ofEventArgs& args) {
-    if(firstTime) { 
+//------------------------------------------------------------------------------
+void ofxOAuth::update(ofEventArgs& args)
+{
+    if(_firstTime)
+    {
         loadCredentials();
-        firstTime = false; 
+        _firstTime = false;
     }
     
-    if(accessFailed) {
-        if(!accessFailedReported) {
+    if(accessFailed)
+    {
+        if(!accessFailedReported)
+        {
             ofLogError("ofxOAuth::update") << "Access failed.";
             accessFailedReported = true;
         }
-    } else if(accessToken.empty() || accessTokenSecret.empty()) {
-        if(requestTokenVerifier.empty()) {
-            if(requestToken.empty()) {
-                if(enableVerifierCallbackServer) {
-                    if(verifierCallbackServer == NULL) {
-                        verifierCallbackServer = ofPtr<ofxOAuthVerifierCallbackServer>(new ofxOAuthVerifierCallbackServer(this,verifierCallbackServerDocRoot, vertifierCallbackServerPort));
+    }
+    else if(accessToken.empty() || accessTokenSecret.empty())
+    {
+        if(requestTokenVerifier.empty())
+        {
+            if(requestToken.empty())
+            {
+                if(enableVerifierCallbackServer)
+                {
+                    if(verifierCallbackServer == NULL)
+                    {
+                        verifierCallbackServer = std::shared_ptr<ofxOAuthVerifierCallbackServer>(new ofxOAuthVerifierCallbackServer(this,verifierCallbackServerDocRoot, vertifierCallbackServerPort));
                         verifierCallbackURL = verifierCallbackServer->getURL();
                         verifierCallbackServer->start();
                     }
-                } else {
+                }
+                else
+                {
                     // nichts
                     ofLogVerbose("ofxOAuth::update") << "Server disabled, expecting verifiy key input via a non server method (i.e. text input.)";
                     ofLogVerbose("ofxOAuth::update") << "\t\tThis is done via 'oob' (Out-of-band OAuth authentication).";
@@ -132,8 +154,11 @@ void ofxOAuth::update(ofEventArgs& args) {
                 }
 
                 obtainRequestToken();
-            } else {
-                if(!verificationRequested) {
+            }
+            else
+            {
+                if(!verificationRequested)
+                {
                     requestUserVerification();
                     verificationRequested = true;
                     ofLogVerbose("ofxOAuth::update") << "Waiting for user verification (need the pin number / requestTokenVerifier!)";
@@ -141,22 +166,31 @@ void ofxOAuth::update(ofEventArgs& args) {
                     ofLogVerbose("ofxOAuth::update") << "\t\tIf the server is disabled, verification must be done via 'oob'";
                     ofLogVerbose("ofxOAuth::update") << "\t\t(Out-of-band OAuth authentication). Call setRequestTokenVerifier()";
                     ofLogVerbose("ofxOAuth::update") << "\t\twith a verification code to continue.";
-                } else {
+                }
+                else
+                {
                     // nichts
                 }
             }
-        } else {
-            if(!accessFailed) {
+        }
+        else
+        {
+            if(!accessFailed)
+            {
                 verificationRequested = false;
-                if(verifierCallbackServer != NULL) {
+                if(verifierCallbackServer != NULL)
+                {
                     verifierCallbackServer->stop(); // stop the server
                     verifierCallbackServer.reset(); // destroy the server, setting it back to null
                 }
                 obtainAccessToken();
             }
         } 
-    } else {
-        if(verifierCallbackServer != NULL) {
+    }
+    else
+    {
+        if(verifierCallbackServer != NULL)
+        {
             // go ahead and free that memory
             verifierCallbackServer->stop(); // stop the server
             verifierCallbackServer.reset(); // destroy the server, setting it back to null
@@ -164,35 +198,46 @@ void ofxOAuth::update(ofEventArgs& args) {
     }
 }
 
-//--------------------------------------------------------------
-string ofxOAuth::get(const string& uri, const string& query) {
-    string result = "";
+//------------------------------------------------------------------------------
+std::string ofxOAuth::get(const std::string& uri, const std::string& query)
+{
+    std::string result = "";
         
-    if(apiURL.empty()) {
-        ofLogError("ofxOAuth::get") << "No api URL specified."; return result;
+    if(apiURL.empty())
+    {
+        ofLogError("ofxOAuth::get") << "No api URL specified.";
+        return result;
     }
     
-    if(consumerKey.empty()) {
-        ofLogError("ofxOAuth::get") << "No consumer key specified."; return result;
+    if(consumerKey.empty())
+    {
+        ofLogError("ofxOAuth::get") << "No consumer key specified.";
+        return result;
     }
     
-    if(consumerSecret.empty()) {
-        ofLogError("ofxOAuth::get") << "No consumer secret specified."; return result;
+    if(consumerSecret.empty())
+    {
+        ofLogError("ofxOAuth::get") << "No consumer secret specified.";
+        return result;
     }
     
-    if(accessToken.empty()) {
-        ofLogError("ofxOAuth::get") << "No access token specified."; return result;
+    if(accessToken.empty())
+    {
+        ofLogError("ofxOAuth::get") << "No access token specified.";
+        return result;
     }
 
-    if(accessTokenSecret.empty()) {
-        ofLogError("ofxOAuth::get") << "No access token secret specified."; return result;
+    if(accessTokenSecret.empty())
+    {
+        ofLogError("ofxOAuth::get") << "No access token secret specified.";
+        return result;
     }
 
-    string req_url;
-    string req_hdr;
-    string http_hdr;
+    std::string req_url;
+    std::string req_hdr;
+    std::string http_hdr;
     
-    string reply;
+    std::string reply;
     
     // oauth_sign_url2 (see oauth.h) in steps
     int  argc   = 0;
@@ -203,7 +248,7 @@ string ofxOAuth::get(const string& uri, const string& query) {
     // here.  For instance, if ?oauth_callback=XXX is defined in this url,
     // it will be parsed and used in the Authorization header.
     
-    string url = apiURL + uri + "?" + query;
+    std::string url = apiURL + uri + "?" + query;
     
     argc = oauth_split_url_parameters(url.c_str(), &argv);
     
@@ -242,12 +287,15 @@ string ofxOAuth::get(const string& uri, const string& query) {
     oauth_free_array(&argc, &argv);
     
     // construct the Authorization header.  Include realm information if available.
-    if(!realm.empty()) {
+    if(!realm.empty())
+    {
         // Note that (optional) 'realm' is not to be 
         // included in the oauth signed parameters and thus only added here.
         // see 9.1.1 in http://oauth.net/core/1.0/#anchor14
         http_hdr = "Authorization: OAuth realm=\"" + realm + "\", " + req_hdr; 
-    } else {
+    }
+    else
+    {
         http_hdr = "Authorization: OAuth " + req_hdr; 
     }
     
@@ -259,9 +307,12 @@ string ofxOAuth::get(const string& uri, const string& query) {
                             NULL,              // the query string to send
                             http_hdr.c_str()); // Authorization header is included here
     
-    if (reply.empty()) {
+    if (reply.empty())
+    {
         ofLogVerbose("ofxOAuth::get") << "HTTP get request failed.";
-    } else {
+    }
+    else
+    {
         ofLogVerbose("ofxOAuth::get") << "HTTP-Reply: " << reply;
         result = reply;
     }
@@ -269,35 +320,43 @@ string ofxOAuth::get(const string& uri, const string& query) {
     return result;
 }
 
-//--------------------------------------------------------------
-string ofxOAuth::post(const string& uri, const string& query) {
+//------------------------------------------------------------------------------
+std::string ofxOAuth::post(const std::string& uri, const std::string& query)
+{
     string result = "";
     // TODO: well, this whole method ...
     ofLogWarning("ofxOAuth::post") << "This method is not implemented, returning empty string.";
     return result;
 }
 
-//--------------------------------------------------------------
-map<string, string> ofxOAuth::obtainRequestToken() {
-    map<string, string> returnParams;
+//------------------------------------------------------------------------------
+std::map<string, string> ofxOAuth::obtainRequestToken()
+{
+    map<std::string, std::string> returnParams;
 
-    if(requestTokenURL.empty()) {
-        ofLogError("ofxOAuth::obtainRequestToken") << "No request token URL specified."; return returnParams;
+    if(requestTokenURL.empty())
+    {
+        ofLogError("ofxOAuth::obtainRequestToken") << "No request token URL specified.";
+        return returnParams;
     }
     
-    if(consumerKey.empty()) {
-        ofLogError("ofxOAuth::obtainRequestToken") << "No consumer key specified."; return returnParams;
+    if(consumerKey.empty())
+    {
+        ofLogError("ofxOAuth::obtainRequestToken") << "No consumer key specified.";
+        return returnParams;
     }
 
-    if(consumerSecret.empty()) {
-        ofLogError("ofxOAuth::obtainRequestToken") << "No consumer secret specified."; return returnParams;
+    if(consumerSecret.empty())
+    {
+        ofLogError("ofxOAuth::obtainRequestToken") << "No consumer secret specified.";
+        return returnParams;
     }
 
-    string req_url;
-    string req_hdr;
-    string http_hdr;
+    std::string req_url;
+    std::string req_hdr;
+    std::string http_hdr;
 
-    string reply;
+    std::string reply;
     
     // oauth_sign_url2 (see oauth.h) in steps
     int  argc   = 0;
@@ -310,8 +369,9 @@ map<string, string> ofxOAuth::obtainRequestToken() {
     argc = oauth_split_url_parameters(requestTokenURL.c_str(), &argv);
     
     // add the authorization callback url info if available
-    if(!getVerifierCallbackURL().empty()) {
-        string callbackParam = "oauth_callback=" + getVerifierCallbackURL();
+    if(!getVerifierCallbackURL().empty())
+    {
+        std::string callbackParam = "oauth_callback=" + getVerifierCallbackURL();
         oauth_add_param_to_array(&argc, &argv, callbackParam.c_str());
     }
 
@@ -324,16 +384,18 @@ map<string, string> ofxOAuth::obtainRequestToken() {
      https://developers.google.com/accounts/docs/OAuth_ref#RequestToken
      */
     
-    if(!getApplicationDisplayName().empty()) {
-        string displayNameParam = "xoauth_displayname=" + getApplicationDisplayName();
+    if(!getApplicationDisplayName().empty())
+    {
+        std::string displayNameParam = "xoauth_displayname=" + getApplicationDisplayName();
         oauth_add_param_to_array(&argc, &argv, displayNameParam.c_str());
     }
     
-    if(!getApplicationScope().empty()) {
+    if(!getApplicationScope().empty())
+    {
         // TODO: this will not be integrated correctly by lib oauth
         // b/c it does not have a oauth / xoauth prefix
         // XXXXXXXXXX
-        string scopeParam = "scope=" + getApplicationScope();
+        std::string scopeParam = "scope=" + getApplicationScope();
         oauth_add_param_to_array(&argc, &argv, scopeParam.c_str());
     }
     
@@ -377,12 +439,15 @@ map<string, string> ofxOAuth::obtainRequestToken() {
     oauth_free_array(&argc, &argv);
     
     // construct the Authorization header.  Include realm information if available.
-    if(!realm.empty()) {
+    if(!realm.empty())
+    {
         // Note that (optional) 'realm' is not to be 
         // included in the oauth signed parameters and thus only added here.
         // see 9.1.1 in http://oauth.net/core/1.0/#anchor14
         http_hdr = "Authorization: OAuth realm=\"" + realm + "\", " + req_hdr; 
-    } else {
+    }
+    else
+    {
         http_hdr = "Authorization: OAuth " + req_hdr;
     }
 
@@ -394,44 +459,60 @@ map<string, string> ofxOAuth::obtainRequestToken() {
                             NULL,              // the query string to send
                             http_hdr.c_str()); // Authorization header is included here
     
-    if (reply.empty()) {
+    if (reply.empty())
+    {
         ofLogVerbose("ofxOAuth::obtainRequestToken") << "HTTP request for an oauth request-token failed.";
-    } else {
+    }
+    else
+    {
         ofLogVerbose("ofxOAuth::obtainRequestToken") << "HTTP-Reply: " << reply;
 
         // could use oauth_split_url_parameters here.
-        vector<string> params = ofSplitString(reply, "&", true);
+        std::vector<std::string> params = ofSplitString(reply, "&", true);
 
-        for(int i = 0; i < params.size(); i++) {
-            vector<string> tokens = ofSplitString(params[i], "=");
-            if(tokens.size() == 2) {
+        for(int i = 0; i < params.size(); i++)
+        {
+            std::vector<std::string> tokens = ofSplitString(params[i], "=");
+            if(tokens.size() == 2)
+            {
                 returnParams[tokens[0]] = tokens[1];
                 
-                if(Poco::icompare(tokens[0],"oauth_token") == 0) {
+                if(Poco::icompare(tokens[0],"oauth_token") == 0)
+                {
                     requestToken = tokens[1];
-                } else if(Poco::icompare(tokens[0],"oauth_token_secret") == 0) {
+                }
+                else if(Poco::icompare(tokens[0],"oauth_token_secret") == 0)
+                {
                     requestTokenSecret = tokens[1];
-                } else if(Poco::icompare(tokens[0],"oauth_callback_confirmed") == 0) {
+                }
+                else if(Poco::icompare(tokens[0],"oauth_callback_confirmed") == 0)
+                {
                     callbackConfirmed = ofToBool(tokens[1]);
-                } else if(Poco::icompare(tokens[0],"oauth_problem") == 0) {
+                }
+                else if(Poco::icompare(tokens[0],"oauth_problem") == 0)
+                {
                     ofLogError("ofxOAuth::obtainRequestToken") <<  "Got oauth problem: " << tokens[1];
-                } else {
+                }
+                else
+                {
                     ofLogNotice("ofxOAuth::obtainRequestToken") << "Got an unknown parameter: " << tokens[0] << "=" + tokens[1];
                 }
-                   
-                
-            } else {
+            }
+            else
+            {
                 ofLogWarning("ofxOAuth::obtainRequestToken") <<  "Return parameter did not have 2 values: " << params[i] << " - skipping.";
             }
         }
     }
     
-    if(requestTokenSecret.empty()) {
+    if(requestTokenSecret.empty())
+    {
         ofLogWarning("ofxOAuth::obtainRequestToken") << "Request token secret not returned.";
         accessFailed = true;
     }
 
-    if(requestToken.empty()) {
+    if(requestToken.empty())
+    {
         ofLogWarning("ofxOAuth::obtainRequestToken") << "Request token not returned.";
         accessFailed = true;
     }
@@ -440,46 +521,52 @@ map<string, string> ofxOAuth::obtainRequestToken() {
     return returnParams;
 }
 
-//--------------------------------------------------------------
-map<string, string> ofxOAuth::obtainAccessToken() {
+//------------------------------------------------------------------------------
+std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
+{
+    std::map<std::string,std::string> returnParams;
     
-    map<string, string> returnParams;
-    
-    if(accessTokenURL.empty()) {
+    if(accessTokenURL.empty())
+    {
         ofLogError("ofxOAuth::obtainAccessToken") << "No access token URL specified.";
         return returnParams;
     }
     
-    if(consumerKey.empty()) {
+    if(consumerKey.empty())
+    {
         ofLogError("ofxOAuth::obtainAccessToken") << "No consumer key specified.";
         return returnParams;
     }
     
-    if(consumerSecret.empty()) {
+    if(consumerSecret.empty())
+    {
         ofLogError("ofxOAuth::obtainAccessToken") << "No consumer secret specified.";
         return returnParams;
     }
     
-    if(requestToken.empty()) {
+    if(requestToken.empty())
+    {
         ofLogError("ofxOAuth::obtainAccessToken") << "No request token specified.";
         return returnParams;
     }
     
-    if(requestTokenSecret.empty()) {
+    if(requestTokenSecret.empty())
+    {
         ofLogError("ofxOAuth::obtainAccessToken") << "No request token secret specified.";
         return returnParams;
     }
     
-    if(requestTokenVerifier.empty()) {
+    if(requestTokenVerifier.empty())
+    {
         ofLogError("ofxOAuth::obtainAccessToken") << "No request token verifier specified.";
         return returnParams;
     }
     
-    string req_url;
-    string req_hdr;
-    string http_hdr;
+    std::string req_url;
+    std::string req_hdr;
+    std::string http_hdr;
     
-    string reply;
+    std::string reply;
     
     // oauth_sign_url2 (see oauth.h) in steps
     int  argc   = 0;
@@ -492,7 +579,7 @@ map<string, string> ofxOAuth::obtainAccessToken() {
     argc = oauth_split_url_parameters(getAccessTokenURL().c_str(), &argv);
     
     // add the verifier param
-    string verifierParam = "oauth_verifier=" + requestTokenVerifier;
+    std::string verifierParam = "oauth_verifier=" + requestTokenVerifier;
     oauth_add_param_to_array(&argc, &argv, verifierParam.c_str());
 
     // NOTE: if desired, normal oauth parameters, such as oauth_nonce could be overriden here
@@ -527,8 +614,10 @@ map<string, string> ofxOAuth::obtainAccessToken() {
     req_hdr = oauth_serialize_url_sep(argc, 1, argv, const_cast<char *>(", "), 6); // const_cast<char *>() is to avoid Deprecated 
     
     // look at url parameters to be signed if you want.
-    if(ofGetLogLevel() <= OF_LOG_VERBOSE) {
-        for(int i=0; i<argc; i++) {
+    if(ofGetLogLevel() <= OF_LOG_VERBOSE)
+    {
+        for(int i=0; i < argc; i++)
+        {
             ofLogVerbose("ofxOAuth::obtainAccessToken") << i << " >" << argv[i] << "<";
         }
     }
@@ -537,12 +626,15 @@ map<string, string> ofxOAuth::obtainAccessToken() {
     oauth_free_array(&argc, &argv);
     
     // construct the Authorization header.  Include realm information if available.
-    if(!realm.empty()) {
+    if(!realm.empty())
+    {
         // Note that (optional) 'realm' is not to be 
         // included in the oauth signed parameters and thus only added here.
         // see 9.1.1 in http://oauth.net/core/1.0/#anchor14
         http_hdr = "Authorization: OAuth realm=\"" + realm + "\", " + req_hdr; 
-    } else {
+    }
+    else
+    {
         http_hdr = "Authorization: OAuth " + req_hdr; 
     }
     
@@ -555,46 +647,68 @@ map<string, string> ofxOAuth::obtainAccessToken() {
                             http_hdr.c_str()); // Authorization header is included here
     
     
-    if (reply.empty()) {
+    if (reply.empty())
+    {
         ofLogVerbose("ofxOAuth::obtainAccessToken") << "HTTP request for an oauth request-token failed.";
-    } else {
+    }
+    else
+    {
         ofLogVerbose("ofxOAuth::obtainAccessToken") << "HTTP-Reply >" << reply << "<";
         
         // could use oauth_split_url_parameters here.
-        vector<string> params = ofSplitString(reply, "&", true);
+        std::vector<std::string> params = ofSplitString(reply, "&", true);
         
-        for(int i = 0; i < params.size(); i++) {
-            vector<string> tokens = ofSplitString(params[i], "=");
-            if(tokens.size() == 2) {
+        for(int i = 0; i < params.size(); i++)
+        {
+            std::vector<std::string> tokens = ofSplitString(params[i], "=");
+            if(tokens.size() == 2)
+            {
                 returnParams[tokens[0]] = tokens[1];
                 
-                if(Poco::icompare(tokens[0],"oauth_token") == 0) {
+                if(Poco::icompare(tokens[0],"oauth_token") == 0)
+                {
                     accessToken = tokens[1];
-                } else if(Poco::icompare(tokens[0],"oauth_token_secret") == 0) {
+                }
+                else if(Poco::icompare(tokens[0],"oauth_token_secret") == 0)
+                {
                     accessTokenSecret = tokens[1];
-                } else if(Poco::icompare(tokens[0],"encoded_user_id") == 0) {
+                }
+                else if(Poco::icompare(tokens[0],"encoded_user_id") == 0)
+                {
                     encodedUserId = tokens[1];
-                } else if(Poco::icompare(tokens[0],"user_id") == 0) {
+                }
+                else if(Poco::icompare(tokens[0],"user_id") == 0)
+                {
                     userId = tokens[1];
-                } else if(Poco::icompare(tokens[0],"screen_name") == 0) {
+                }
+                else if(Poco::icompare(tokens[0],"screen_name") == 0)
+                {
                     screenName = tokens[1];
-                } else if(Poco::icompare(tokens[0],"oauth_problem") == 0) {
+                }
+                else if(Poco::icompare(tokens[0],"oauth_problem") == 0)
+                {
                     ofLogError("ofxOAuth::obtainAccessToken") << "Got oauth problem: " << tokens[1];
-                } else {
+                }
+                else
+                {
                     ofLogNotice("ofxOAuth::obtainAccessToken") << "got an unknown parameter: " << tokens[0] << "=" << tokens[1];
                 }
-            } else {
+            }
+            else
+            {
                 ofLogWarning("ofxOAuth::obtainAccessToken") << "Return parameter did not have 2 values: "  << params[i] << " - skipping.";
             }
         }
     }
     
-    if(accessTokenSecret.empty()) {
+    if(accessTokenSecret.empty())
+    {
         ofLogWarning("ofxOAuth::obtainAccessToken") << "Access token secret not returned.";
         accessFailed = true;
     }
     
-    if(accessToken.empty()) {
+    if(accessToken.empty())
+    {
         ofLogWarning("ofxOAuth::obtainAccessToken") << "Access token not returned.";
         accessFailed = true;
     }
@@ -605,17 +719,21 @@ map<string, string> ofxOAuth::obtainAccessToken() {
     return returnParams;
 }
 
-//--------------------------------------------------------------
-string ofxOAuth::requestUserVerification(bool launchBrowser) {
+//------------------------------------------------------------------------------
+std::string ofxOAuth::requestUserVerification(bool launchBrowser)
+{
     return requestUserVerification("",launchBrowser);
 }
 
 //--------------------------------------------------------------
-string ofxOAuth::requestUserVerification(string additionalAuthParams, bool launchBrowser) {
+std::string ofxOAuth::requestUserVerification(std::string additionalAuthParams,
+                                              bool launchBrowser)
+{
     
-    string url = getAuthorizationURL();
+    std::string url = getAuthorizationURL();
     
-    if(url.empty()) {
+    if(url.empty())
+    {
         ofLogError("ofxOAuth::requestUserVerification") << "Authorization URL is not set.";
         return "";
     }
@@ -629,89 +747,307 @@ string ofxOAuth::requestUserVerification(string additionalAuthParams, bool launc
     return url;
 }
 
-//--------------------------------------------------------------
-string ofxOAuth::getApiURL() { return apiURL; }
-void   ofxOAuth::setApiURL(const string &v, bool autoSetEndpoints) { 
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getApiURL()
+{
+    return apiURL;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setApiURL(const std::string &v, bool autoSetEndpoints)
+{
     apiURL = v; 
-    if(autoSetEndpoints) {
+    if(autoSetEndpoints)
+    {
         setRequestTokenURL(apiURL + "/oauth/request_token");
         setAccessTokenURL(apiURL + "/oauth/access_token");
         setAuthorizationURL(apiURL + "/oauth/authorize");
     }
 }
-string ofxOAuth::getRequestTokenURL() { return requestTokenURL; }
-void   ofxOAuth::setRequestTokenURL(const string& v) { requestTokenURL = appendQuestionMark(v); }
-string ofxOAuth::getAccessTokenURL() { return accessTokenURL; }
-void   ofxOAuth::setAccessTokenURL(const string& v) { accessTokenURL = appendQuestionMark(v); }
-string ofxOAuth::getAuthorizationURL() { return authorizationURL; }
-void   ofxOAuth::setAuthorizationURL(const string& v) { authorizationURL = appendQuestionMark(v); }
 
-string ofxOAuth::getVerifierCallbackURL() { return verifierCallbackURL; }
-void   ofxOAuth::setVerifierCallbackURL(const string& v) { verifierCallbackURL = v; }
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getRequestTokenURL()
+{
+    return requestTokenURL;
+}
 
-void   ofxOAuth::setApplicationDisplayName(const string& v) { applicationDisplayName = v; }
-string ofxOAuth::getApplicationDisplayName() { return applicationDisplayName; }
+//------------------------------------------------------------------------------
+void ofxOAuth::setRequestTokenURL(const std::string& v)
+{
+    requestTokenURL = appendQuestionMark(v);
+}
 
-void   ofxOAuth::setApplicationScope(const string& v) { applicationScope = v; } // google specific
-string ofxOAuth::getApplicationScope() { return applicationScope; }
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getAccessTokenURL()
+{
+    return accessTokenURL;
+}
 
+//------------------------------------------------------------------------------
+void ofxOAuth::setAccessTokenURL(const std::string& v)
+{
+    accessTokenURL = appendQuestionMark(v);
+}
 
-bool   ofxOAuth::isVerifierCallbackServerEnabled() { return enableVerifierCallbackServer; }
-void   ofxOAuth::setVerifierCallbackServerDocRoot(const string& v) { verifierCallbackServerDocRoot = v; }
-string ofxOAuth::getVerifierCallbackServerDocRoot() { return verifierCallbackServerDocRoot; }
-bool   ofxOAuth::isVerifierCallbackPortSet() const { return vertifierCallbackServerPort > 0; }
-int    ofxOAuth::getVerifierCallbackServerPort() const { return vertifierCallbackServerPort; }
-void   ofxOAuth::setVerifierCallbackServerPort(int portNumber) { vertifierCallbackServerPort = portNumber; }
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getAuthorizationURL()
+{
+    return authorizationURL;
+}
 
-void ofxOAuth::setEnableVerifierCallbackServer(bool v) {
+//------------------------------------------------------------------------------
+void ofxOAuth::setAuthorizationURL(const std::string& v)
+{
+    authorizationURL = appendQuestionMark(v);
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getVerifierCallbackURL()
+{
+    return verifierCallbackURL;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setVerifierCallbackURL(const std::string& v)
+{
+    verifierCallbackURL = v;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setApplicationDisplayName(const std::string& v)
+{
+    applicationDisplayName = v;
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getApplicationDisplayName()
+{
+    return applicationDisplayName;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setApplicationScope(const std::string& v)
+{
+    // google specific
+    applicationScope = v;
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getApplicationScope()
+{
+    return applicationScope;
+}
+
+//------------------------------------------------------------------------------
+bool ofxOAuth::isVerifierCallbackServerEnabled()
+{
+    return enableVerifierCallbackServer;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setVerifierCallbackServerDocRoot(const std::string& v)
+{
+    verifierCallbackServerDocRoot = v;
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getVerifierCallbackServerDocRoot()
+{
+    return verifierCallbackServerDocRoot;
+}
+
+//------------------------------------------------------------------------------
+bool ofxOAuth::isVerifierCallbackPortSet() const
+{
+    return vertifierCallbackServerPort > 0;
+}
+
+//------------------------------------------------------------------------------
+int ofxOAuth::getVerifierCallbackServerPort() const
+{
+    return vertifierCallbackServerPort;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setVerifierCallbackServerPort(int portNumber)
+{
+    vertifierCallbackServerPort = portNumber;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setEnableVerifierCallbackServer(bool v)
+{
     enableVerifierCallbackServer = v;
 }
 
-//--------------------------------------------------------------
-string ofxOAuth::getRequestToken() { return requestToken; }
-void   ofxOAuth::setRequestToken(const string& v) { requestToken = v; }
-string ofxOAuth::getRequestTokenSecret() { return requestTokenSecret; }
-void   ofxOAuth::setRequestTokenSecret(const string& v) { requestTokenSecret = v; }
-string ofxOAuth::getRequestTokenVerifier() { return requestTokenVerifier; }
-void   ofxOAuth::setRequestTokenVerifier(const string& _requestToken, const string& _requestTokenVerifier) {
-    if(_requestToken == getRequestToken()) {
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getRequestToken()
+{
+    return requestToken;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setRequestToken(const std::string& v)
+{
+    requestToken = v;
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getRequestTokenSecret()
+{
+    return requestTokenSecret;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setRequestTokenSecret(const std::string& v)
+{
+    requestTokenSecret = v;
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getRequestTokenVerifier()
+{
+    return requestTokenVerifier;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setRequestTokenVerifier(const std::string& _requestToken,
+                                       const std::string& _requestTokenVerifier)
+{
+    if(_requestToken == getRequestToken())
+    {
         setRequestTokenVerifier(_requestTokenVerifier);
-    } else {
+    }
+    else
+    {
         ofLogError("ofxOAuth::getRequestToken") << "The request token didn't match the request token on record.";
     }
 }
-void   ofxOAuth::setRequestTokenVerifier(const string& v) { requestTokenVerifier = v;}
 
-//--------------------------------------------------------------
-string ofxOAuth::getAccessToken() { return accessToken; }
-void   ofxOAuth::setAccessToken(const string& v) { accessToken = v; }
-string ofxOAuth::getAccessTokenSecret() { return accessTokenSecret; }
-void   ofxOAuth::setAccessTokenSecret(const string& v) { accessTokenSecret = v; }
-string ofxOAuth::getEncodedUserId() { return encodedUserId; }
-void   ofxOAuth::setEncodedUserId(const string& v) { encodedUserId = v; }
-string ofxOAuth::getUserId() { return userId; }
-void   ofxOAuth::setUserId(const string& v) { userId = v; }
-string ofxOAuth::getEncodedUserPassword() { return encodedUserPassword; }
-void   ofxOAuth::setEncodedUserPassword(const string& v) { encodedUserPassword = v; }
-string ofxOAuth::getUserPassword() { return userPassword; }
-void   ofxOAuth::setUserPassword(const string& v) { userPassword = v; }
+//------------------------------------------------------------------------------
+void ofxOAuth::setRequestTokenVerifier(const std::string& v)
+{
+    requestTokenVerifier = v;
+}
 
-//--------------------------------------------------------------
-string ofxOAuth::getConsumerKey() { return consumerKey; }
-void   ofxOAuth::setConsumerKey(const string& v) { consumerKey = v; }
-string ofxOAuth::getConsumerSecret() { return consumerSecret; }
-void   ofxOAuth::setConsumerSecret(const string& v) {consumerSecret = v; }
-void   ofxOAuth::setApiName(const string& v) { apiName = v; }
-string ofxOAuth::getApiName() { return apiName; }
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getAccessToken()
+{
+    return accessToken;
+}
 
-//--------------------------------------------------------------
-void ofxOAuth::receivedVerifierCallbackRequest(const Poco::Net::HTTPServerRequest& request) {
+//------------------------------------------------------------------------------
+void ofxOAuth::setAccessToken(const std::string& v)
+{
+    accessToken = v;
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getAccessTokenSecret()
+{
+    return accessTokenSecret;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setAccessTokenSecret(const std::string& v)
+{
+    accessTokenSecret = v;
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getEncodedUserId()
+{
+    return encodedUserId;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setEncodedUserId(const std::string& v)
+{
+    encodedUserId = v;
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getUserId()
+{
+    return userId;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setUserId(const std::string& v)
+{
+    userId = v;
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getEncodedUserPassword()
+{
+    return encodedUserPassword;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setEncodedUserPassword(const std::string& v)
+{
+    encodedUserPassword = v;
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getUserPassword()
+{
+    return userPassword;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setUserPassword(const std::string& v)
+{
+    userPassword = v;
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getConsumerKey()
+{
+    return consumerKey;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setConsumerKey(const std::string& v)
+{
+    consumerKey = v;
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getConsumerSecret()
+{
+    return consumerSecret;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setConsumerSecret(const std::string& v)
+{
+    consumerSecret = v;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::setApiName(const std::string& v)
+{
+    apiName = v;
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getApiName()
+{
+    return apiName;
+}
+
+//------------------------------------------------------------------------------
+void ofxOAuth::receivedVerifierCallbackRequest(const Poco::Net::HTTPServerRequest& request)
+{
     ofLogVerbose("ofxOAuth::receivedVerifierCallbackRequest") << "Not implemented.";
     // does nothing with this, but subclasses might.
 }
 
-//--------------------------------------------------------------
-void ofxOAuth::receivedVerifierCallbackHeaders(const Poco::Net::NameValueCollection& headers) {
+//------------------------------------------------------------------------------
+void ofxOAuth::receivedVerifierCallbackHeaders(const Poco::Net::NameValueCollection& headers)
+{
     ofLogVerbose("ofxOAuth::receivedVerifierCallbackHeaders") << "Not implemented.";
     // for(NameValueCollection::ConstIterator iter = headers.begin(); iter != headers.end(); iter++) {
     //    ofLogVerbose("ofxOAuth::receivedVerifierCallbackHeaders") << (*iter).first << "=" << (*iter).second;
@@ -719,48 +1055,71 @@ void ofxOAuth::receivedVerifierCallbackHeaders(const Poco::Net::NameValueCollect
     // does nothing with this, but subclasses might.
 }
 
-//--------------------------------------------------------------
-void ofxOAuth::receivedVerifierCallbackCookies(const Poco::Net::NameValueCollection& cookies) {
-    for(NameValueCollection::ConstIterator iter = cookies.begin(); iter != cookies.end(); iter++) {
+//------------------------------------------------------------------------------
+void ofxOAuth::receivedVerifierCallbackCookies(const Poco::Net::NameValueCollection& cookies)
+{
+    for(Poco::Net::NameValueCollection::ConstIterator iter = cookies.begin();
+        iter != cookies.end();
+        iter++)
+    {
         ofLogVerbose("ofxOAuth::receivedVerifierCallbackCookies") << (*iter).first << "=" << (*iter).second;
     }
     // does nothing with this, but subclasses might.
 }
 
-//--------------------------------------------------------------
-void ofxOAuth::receivedVerifierCallbackGetParams(const Poco::Net::NameValueCollection& getParams) {
-    for(NameValueCollection::ConstIterator iter = getParams.begin(); iter != getParams.end(); iter++) {
+//------------------------------------------------------------------------------
+void ofxOAuth::receivedVerifierCallbackGetParams(const Poco::Net::NameValueCollection& getParams)
+{
+    for(Poco::Net::NameValueCollection::ConstIterator iter = getParams.begin();
+        iter != getParams.end();
+        iter++) {
         ofLogVerbose("ofxOAuth::receivedVerifierCallbackGetParams") << (*iter).first << "=" << (*iter).second;
     }
 
     // we normally extract these params
-    if(getParams.has("oauth_token") && getParams.has("oauth_verifier")) {
+    if(getParams.has("oauth_token") && getParams.has("oauth_verifier"))
+    {
         setRequestTokenVerifier(getParams.get("oauth_token"), getParams.get("oauth_verifier"));
     }
     
     // subclasses might also want to extract other get parameters.    
 }
 
-//--------------------------------------------------------------
-void ofxOAuth::receivedVerifierCallbackPostParams(const Poco::Net::NameValueCollection& postParams) {
-    for(NameValueCollection::ConstIterator iter = postParams.begin(); iter != postParams.end(); iter++) {
+//------------------------------------------------------------------------------
+void ofxOAuth::receivedVerifierCallbackPostParams(const Poco::Net::NameValueCollection& postParams)
+{
+    // come soon c++11!
+    for(Poco::Net::NameValueCollection::ConstIterator iter = postParams.begin();
+        iter != postParams.end();
+        iter++)
+    {
         ofLogVerbose("ofxOAuth::receivedVerifierCallbackPostParams") << (*iter).first << "=" << (*iter).second;
     }
     
     // does nothing with this, but subclasses might.
 }
 
-//--------------------------------------------------------------
-string ofxOAuth::getRealm() { return realm; }
-void   ofxOAuth::setRealm(const string& v) { realm = v; }
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getRealm()
+{
+    return realm;
+}
 
-//--------------------------------------------------------------
-bool ofxOAuth::isAuthorized() {
+//------------------------------------------------------------------------------
+void ofxOAuth::setRealm(const std::string& v)
+{
+    realm = v;
+}
+
+//------------------------------------------------------------------------------
+bool ofxOAuth::isAuthorized()
+{
     return !accessToken.empty() && !accessTokenSecret.empty();
 }
 
-//--------------------------------------------------------------
-void ofxOAuth::saveCredentials() {
+//------------------------------------------------------------------------------
+void ofxOAuth::saveCredentials()
+{
     ofxXmlSettings XML;
     
     XML.getValue("oauth:api_name", apiName);
@@ -776,17 +1135,20 @@ void ofxOAuth::saveCredentials() {
     XML.setValue("oauth:user_password", userPassword);
     XML.setValue("oauth:user_password_encoded",encodedUserPassword);
 
-    if(!XML.saveFile(credentialsPathname)) {
+    if(!XML.saveFile(credentialsPathname))
+    {
         ofLogError("ofxOAuth::saveCredentials") << "Failed to save : " << credentialsPathname;
     }
 
 }
 
-//--------------------------------------------------------------
-void ofxOAuth::loadCredentials() {
+//------------------------------------------------------------------------------
+void ofxOAuth::loadCredentials()
+{
     ofxXmlSettings XML;
     
-    if( XML.loadFile(credentialsPathname) ) {
+    if(XML.loadFile(credentialsPathname))
+    {
 //        <oauth api="GENERIC">
 //          <access_token></access_token>
 //          <access_secret></access_secret>
@@ -808,46 +1170,62 @@ void ofxOAuth::loadCredentials() {
         userPassword        = XML.getValue("oauth:user_password", "");
         encodedUserPassword = XML.getValue("oauth:user_password_encoded","");
 
-        if(accessToken.empty() || accessTokenSecret.empty()) {
+        if(accessToken.empty() || accessTokenSecret.empty())
+        {
             ofLogWarning("ofxOAuth:: Found a credential file, but access token / secret were empty.");
         }
         
-    }else{
+    }
+    else
+    {
         ofLogNotice("ofxOAuth::loadCredentials") << "Unable to locate credentials file at: " << credentialsPathname;
     }
     
 }
 
-//--------------------------------------------------------------
-void ofxOAuth::setCredentialsPathname(const string& credentials) {
+//------------------------------------------------------------------------------
+void ofxOAuth::setCredentialsPathname(const std::string& credentials)
+{
     credentialsPathname = credentials;
 }
 
-//--------------------------------------------------------------
-string ofxOAuth::getCredentialsPathname() {
+//------------------------------------------------------------------------------
+std::string ofxOAuth::getCredentialsPathname()
+{
     return credentialsPathname;
 }
 
+//------------------------------------------------------------------------------
+void ofxOAuth::resetErrors()
+{
+    accessFailed = false;
+    accessFailedReported = false;
+}
 
-//--------------------------------------------------------------
-ofxOAuthMethod ofxOAuth::getOAuthMethod() {
+//------------------------------------------------------------------------------
+ofxOAuth::AuthMethod ofxOAuth::getOAuthMethod()
+{
     return oauthMethod;
 }
 
-//--------------------------------------------------------------
-void ofxOAuth::setOAuthMethod(ofxOAuthMethod v) {
-    oauthMethod = v;
+//------------------------------------------------------------------------------
+void ofxOAuth::setOAuthMethod(AuthMethod _oauthMethod)
+{
+    oauthMethod = _oauthMethod;
 }
 
-//--------------------------------------------------------------
-void ofxOAuth::setSSLCACertificateFile(const string& pathname) {
+//------------------------------------------------------------------------------
+void ofxOAuth::setSSLCACertificateFile(const std::string& pathname)
+{
     SSLCACertificateFile = pathname;
     setenv("CURLOPT_CAINFO", ofToDataPath(SSLCACertificateFile).c_str(), true);
 }
 
-//--------------------------------------------------------------
-OAuthMethod ofxOAuth::_getOAuthMethod() {
-    switch (oauthMethod) {
+//------------------------------------------------------------------------------
+OAuthMethod ofxOAuth::_getOAuthMethod()
+{
+    switch (oauthMethod)
+    {
         case OFX_OA_HMAC:
             return OA_HMAC;
         case OFX_OA_RSA:
@@ -860,8 +1238,11 @@ OAuthMethod ofxOAuth::_getOAuthMethod() {
     }
 }
 
-string ofxOAuth::_getHttpMethod() {
-    switch (httpMethod) {
+//------------------------------------------------------------------------------
+std::string ofxOAuth::_getHttpMethod()
+{
+    switch (httpMethod)
+    {
         case OFX_HTTP_GET:
             return "GET";
         case OFX_HTTP_POST:
@@ -872,11 +1253,10 @@ string ofxOAuth::_getHttpMethod() {
     }
 }
 
-//--------------------------------------------------------------
-
-string ofxOAuth::appendQuestionMark(const string& url) const {
- string u = url;
- if(!u.empty() && u.substr(u.size()-1,u.size()-1) != "?") u += "?"; // need that
- return u;
+//------------------------------------------------------------------------------
+std::string ofxOAuth::appendQuestionMark(const std::string& url) const
+{
+    std::string u = url;
+    if(!u.empty() && u.substr(u.size()-1,u.size()-1) != "?") u += "?"; // need that
+    return u;
 }
-
