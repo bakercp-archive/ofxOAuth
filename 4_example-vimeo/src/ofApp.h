@@ -23,11 +23,21 @@
 // =============================================================================
 
 
-#include "ofApp.h"
+#pragma once
 
 
-int main()
+#include "ofMain.h"
+#include "ofxOAuth.h"
+
+
+class ofApp: public ofBaseApp
 {
-	ofSetupOpenGL(100,100,OF_WINDOW);
-	ofRunApp(new ofApp());
-}
+public:
+    void setup();
+    void draw();
+
+    void keyPressed(int key);
+
+    ofxOAuth oauth;
+
+};

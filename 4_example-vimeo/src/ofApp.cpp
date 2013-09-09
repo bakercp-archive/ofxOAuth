@@ -26,8 +26,48 @@
 #include "ofApp.h"
 
 
-int main()
+//------------------------------------------------------------------------------
+void ofApp::setup()
 {
-	ofSetupOpenGL(100,100,OF_WINDOW);
-	ofRunApp(new ofApp());
+    ofSetFrameRate(30);
+    
+    ofSetLogLevel(OF_LOG_VERBOSE);
+    
+    // TODO: FILL IN YOUR CONSUMER KEY / SECRET here.
+    // THIS will try to load the credentials file.  If there is no 
+    // credentials file, it will initiate a web-based authorization process.
+    oauth.setup("https://vimeo.com","CONSUMER_KEY","CONSUMER_SECRET");
+    
+    // Once authenticated, press space to try an authenticated call.
+}
+
+//------------------------------------------------------------------------------
+void ofApp::draw()
+{
+    if(oauth.isAuthorized())
+    {
+        ofBackground(0,255,0);
+    }
+    else
+    {
+        ofBackground(255,0,0);
+    }
+}
+
+//------------------------------------------------------------------------------
+void ofApp::keyPressed(int key)
+{
+    if(key == ' ')
+    {
+        if(oauth.isAuthorized())
+        {
+            std::string username = "christopherbaker"; // replace this with your own
+            std::string s = oauth.get("/api/rest/v2?method=vimeo.activity.happenedToUser&user_id="+username);
+            ofLogNotice("testApp::keyPressed") << s;
+        }
+        else
+        {
+            ofLogWarning("testApp::keyPressed") << "Not authorized yet.";
+        }
+    }
 }

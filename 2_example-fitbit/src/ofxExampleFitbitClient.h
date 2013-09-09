@@ -23,11 +23,35 @@
 // =============================================================================
 
 
-#include "ofApp.h"
+#pragma once
 
 
-int main()
+#include "ofMain.h"
+#include "ofxOAuth.h"
+
+
+class ofxExampleFitbitClient: public ofxOAuth
 {
-	ofSetupOpenGL(100,100,OF_WINDOW);
-	ofRunApp(new ofApp());
-}
+public:
+    ofxExampleFitbitClient()
+    {
+    }
+
+    virtual ~ofxExampleFitbitClient()
+    {
+    }
+    
+    void setup(const std::string& consumerKey,
+               const std::string& consumerSecret)
+    {
+        ofxOAuth::setup("https://api.fitbit.com",consumerKey,consumerSecret);
+        setAuthorizationURL("https://www.fitbit.com/oauth/authorize"); // custom authorization url
+    }
+    
+    // once setup is called, authenticated calls can be made
+    std::string exampleCall() {
+        // if testing, make sure this date is valid for your data
+        return get("/1/user/-/profile.json");
+    }
+    
+};
