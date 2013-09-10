@@ -35,7 +35,7 @@ void ofApp::setup()
     // A simplified interface when using the ofxExampleTwitterClient class.
     // Twitter-specific configuration details can be taken care of the 
     // ofxOAuth base class.
-    client.setup("J15RonAmOoXDY3ototqIYw","fL0bsBZCQwUMUXDhJCGwUNEBzkta0cYWpgTamXoB50");
+    client.setup("CONSUMER_KEY","CONSUMER_SECRET");
     
     // Once authenticated, press the spacebar to try a test call.
 }
