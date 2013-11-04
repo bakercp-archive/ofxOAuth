@@ -170,8 +170,8 @@ protected:
     AuthMethod getOAuthMethod();
     void setOAuthMethod(AuthMethod v);
 
-    map<std::string, std::string> obtainRequestToken();
-    map<std::string, std::string> obtainAccessToken();
+    map<std::string,std::string> obtainRequestToken();
+    map<std::string,std::string> obtainAccessToken();
     
     std::string requestUserVerification(bool launchBrowser = true);
     std::string requestUserVerification(std::string additionalAuthParams,

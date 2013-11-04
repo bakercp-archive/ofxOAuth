@@ -33,7 +33,7 @@ ofxOAuth::ofxOAuth(): ofxOAuthVerifierCallbackInterface()
     httpMethod  = OFX_HTTP_GET; // default
 
     const char* v = getenv("CURLOPT_CAINFO");
-    if(v != NULL) _old_curlopt_cainfo = v;
+    if(0 != v) _old_curlopt_cainfo = v;
     
     // this Certificate Authority bundle is extracted 
     // from mozilla.org.pem, which can be found here
@@ -134,7 +134,7 @@ void ofxOAuth::update(ofEventArgs& args)
             {
                 if(enableVerifierCallbackServer)
                 {
-                    if(verifierCallbackServer == NULL)
+                    if(0 == verifierCallbackServer)
                     {
                         verifierCallbackServer = std::shared_ptr<ofxOAuthVerifierCallbackServer>(new ofxOAuthVerifierCallbackServer(this,verifierCallbackServerDocRoot, vertifierCallbackServerPort));
                         verifierCallbackURL = verifierCallbackServer->getURL();
@@ -174,7 +174,7 @@ void ofxOAuth::update(ofEventArgs& args)
             if(!accessFailed)
             {
                 verificationRequested = false;
-                if(verifierCallbackServer != NULL)
+                if(0 != verifierCallbackServer)
                 {
                     verifierCallbackServer->stop(); // stop the server
                     verifierCallbackServer.reset(); // destroy the server, setting it back to null
@@ -185,7 +185,7 @@ void ofxOAuth::update(ofEventArgs& args)
     }
     else
     {
-        if(verifierCallbackServer != NULL)
+        if(0 != verifierCallbackServer)
         {
             // go ahead and free that memory
             verifierCallbackServer->stop(); // stop the server
@@ -237,7 +237,7 @@ std::string ofxOAuth::get(const std::string& uri, const std::string& query)
     
     // oauth_sign_url2 (see oauth.h) in steps
     int  argc   = 0;
-    char **argv = NULL;
+    char **argv = 0;
     
     // break apart the url parameters to they can be signed below
     // if desired we can also pass in additional patermeters (like oath* params)
@@ -251,7 +251,7 @@ std::string ofxOAuth::get(const std::string& uri, const std::string& query)
     // sign the array.
     oauth_sign_array2_process(&argc, 
                               &argv,
-                              NULL, //< postargs (unused)
+                              0, //< postargs (unused)
                               _getOAuthMethod(), // hash type, OA_HMAC, OA_RSA, OA_PLAINTEXT
                               _getHttpMethod().c_str(), //< HTTP method (defaults to "GET")
                               consumerKey.c_str(), //< consumer key - posted plain text
@@ -300,7 +300,7 @@ std::string ofxOAuth::get(const std::string& uri, const std::string& query)
     ofLogVerbose("ofxOAuth::get") << "http    HEADER >" << http_hdr << "<";
     
     reply = oauth_http_get2(req_url.c_str(),   // the base url to get
-                            NULL,              // the query string to send
+                            0,              // the query string to send
                             http_hdr.c_str()); // Authorization header is included here
     
     if (reply.empty())
@@ -326,7 +326,7 @@ std::string ofxOAuth::post(const std::string& uri, const std::string& query)
 }
 
 //------------------------------------------------------------------------------
-std::map<string, string> ofxOAuth::obtainRequestToken()
+std::map<std::string, std::string> ofxOAuth::obtainRequestToken()
 {
     map<std::string, std::string> returnParams;
 
@@ -356,7 +356,7 @@ std::map<string, string> ofxOAuth::obtainRequestToken()
     
     // oauth_sign_url2 (see oauth.h) in steps
     int  argc   = 0;
-    char **argv = NULL;
+    char **argv = 0;
     
     // break apart the url parameters to they can be signed below
     // if desired we can also pass in additional patermeters (like oath* params)
@@ -403,13 +403,13 @@ std::map<string, string> ofxOAuth::obtainRequestToken()
     // sign the array.
     oauth_sign_array2_process(&argc, 
                               &argv,
-                              NULL, //< postargs (unused)
+                              0, //< postargs (unused)
                               _getOAuthMethod(), // hash type, OA_HMAC, OA_RSA, OA_PLAINTEXT
                               _getHttpMethod().c_str(), //< HTTP method (defaults to "GET")
                               consumerKey.c_str(), //< consumer key - posted plain text
                               consumerSecret.c_str(), //< consumer secret - used as 1st part of secret-key
-                              NULL,  //< token key - posted plain text in URL
-                              NULL); //< token secret - used as 2st part of secret-key
+                              0,  //< token key - posted plain text in URL
+                              0); //< token secret - used as 2st part of secret-key
     
     ofLogVerbose("ofxOAuth::obtainRequestToken") << "-------------------";
     ofLogVerbose("ofxOAuth::obtainRequestToken") << "consumerKey          >" << consumerKey << "<";
@@ -452,7 +452,7 @@ std::map<string, string> ofxOAuth::obtainRequestToken()
     ofLogVerbose("ofxOAuth::obtainRequestToken") << "http    HEADER = " << http_hdr;
     
     reply = oauth_http_get2(req_url.c_str(),   // the base url to get
-                            NULL,              // the query string to send
+                            0,              // the query string to send
                             http_hdr.c_str()); // Authorization header is included here
     
     if (reply.empty())
@@ -566,7 +566,7 @@ std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
     
     // oauth_sign_url2 (see oauth.h) in steps
     int  argc   = 0;
-    char **argv = NULL;
+    char **argv = 0;
     
     // break apart the url parameters to they can be signed below
     // if desired we can also pass in additional patermeters (like oath* params)
@@ -585,7 +585,7 @@ std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
     // sign the array.
     oauth_sign_array2_process(&argc, 
                               &argv,
-                              NULL, //< postargs (unused)
+                              0, //< postargs (unused)
                               _getOAuthMethod(), // hash type, OA_HMAC, OA_RSA, OA_PLAINTEXT
                               _getHttpMethod().c_str(), //< HTTP method (defaults to "GET")
                               consumerKey.c_str(), //< consumer key - posted plain text
@@ -639,7 +639,7 @@ std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
     ofLogVerbose("ofxOAuth::obtainAccessToken") << "http    HEADER >" << http_hdr << "<";
     
     reply = oauth_http_get2(req_url.c_str(),   // the base url to get
-                            NULL,              // the query string to send
+                            0,              // the query string to send
                             http_hdr.c_str()); // Authorization header is included here
     
     
