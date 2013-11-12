@@ -40,18 +40,23 @@
 # define GLOBAL_CURL_ENVIROMENT_OPTIONS \
 if (getenv("CURLOPT_PROXYAUTH")){ \
 curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY); \
+cout << "CURLOPT_PROXYAUTH: " << getenv("CURLOPT_PROXYAUTH") << endl; \
 } \
 if (getenv("CURLOPT_SSL_VERIFYPEER")){ \
 curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, (long) atol(getenv("CURLOPT_SSL_VERIFYPEER")) ); \
+cout << "CURLOPT_SSL_VERIFYPEER: " << getenv("CURLOPT_SSL_VERIFYPEER") << endl; \
 } \
 if (getenv("CURLOPT_CAINFO")){ \
 curl_easy_setopt(curl, CURLOPT_CAINFO, getenv("CURLOPT_CAINFO") ); \
+cout << "CURLOPT_CAINFO: " << getenv("CURLOPT_CAINFO") << endl; \
 } \
 if (getenv("CURLOPT_FOLLOWLOCATION")){ \
 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, (long) atol(getenv("CURLOPT_FOLLOWLOCATION")) ); \
+cout << "CURLOPT_FOLLOWLOCATION: " << getenv("CURLOPT_FOLLOWLOCATION") << endl; \
 } \
 if (getenv("CURLOPT_FAILONERROR")){ \
 curl_easy_setopt(curl, CURLOPT_FAILONERROR, (long) atol(getenv("CURLOPT_FAILONERROR")) ); \
+cout << "CURLOPT_FAILONERROR: " << getenv("CURLOPT_FAILONERROR") << endl; \
 }
 
 struct MemoryStruct {
@@ -176,34 +181,48 @@ char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader
     chunk.size = 0;
 
     curl = curl_easy_init();
-    if(!curl) return NULL;
-    curl_easy_setopt(curl, CURLOPT_URL, q?t1:u);
+    if(!curl) {
+        cout << "CURL WAS NOT INITIALIZED" << endl;
+        return NULL;
+    }
+
+    cout << "URL TO CHECK " << (q ? t1:u) << endl;
+
+    curl_easy_setopt(curl, CURLOPT_URL, q ? t1:u);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-    if (customheader) {
+    if (customheader) 
+    {
         slist = curl_slist_append(slist, customheader);
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
     }
-#if 0 // TODO - support request methods..
-    if (0)
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "HEAD");
-    else if (0)
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-#endif
+// #if 0 // TODO - support request methods..
+//     if (0)
+//         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "HEAD");
+//     else if (0)
+//         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+// #endif
     curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
-#ifdef OAUTH_CURL_TIMEOUT
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
-    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-#endif
+// #ifdef OAUTH_CURL_TIMEOUT
+//     curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
+//     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+// #endif
     GLOBAL_CURL_ENVIROMENT_OPTIONS;
     res = curl_easy_perform(curl);
     curl_slist_free_all(slist);
-    if (q) free(t1);
+    if (q) {
+        free(t1);
+    }
     curl_easy_cleanup(curl);
 
     if (res) {
+                cout << "CURL RETURNED NOTHING" << endl;
+
         return NULL;
     }
+
+    cout << "CURL RETURNED THIS: " << chunk.data << endl;
+
     return (chunk.data);
 }
 
