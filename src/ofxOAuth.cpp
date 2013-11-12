@@ -70,6 +70,13 @@ struct MemoryStruct {
 
 static size_t
 WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data) {
+    cout << "IN MEMORY CALLBACK" << endl;
+    cout << "ptr: " << ptr << endl;
+    cout << "size: " << size << endl;
+    cout << "nmemb: " << nmemb << endl;
+    cout << "data: " << data << endl;
+
+
     size_t realsize = size * nmemb;
     struct MemoryStruct *mem = (struct MemoryStruct *)data;
 
@@ -79,6 +86,16 @@ WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data) {
         mem->size += realsize;
         mem->data[mem->size] = 0;
     }
+
+    cout << "----" << endl;
+    cout << "ptr: " << ptr << endl;
+    cout << "size: " << size << endl;
+    cout << "nmemb: " << nmemb << endl;
+    cout << "data: " << data << endl;
+    cout << "realsize: " << realsize << endl;
+
+
+
     return realsize;
 }
 
