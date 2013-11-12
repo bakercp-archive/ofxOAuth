@@ -37,27 +37,27 @@
 #include <curl/curl.h>
 #include <sys/stat.h>
 
-# define GLOBAL_CURL_ENVIROMENT_OPTIONS \
-if (getenv("CURLOPT_PROXYAUTH")){ \
-curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY); \
-cout << "CURLOPT_PROXYAUTH: " << getenv("CURLOPT_PROXYAUTH") << endl; \
-} \
-if (getenv("CURLOPT_SSL_VERIFYPEER")){ \
-curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, (long) atol(getenv("CURLOPT_SSL_VERIFYPEER")) ); \
-cout << "CURLOPT_SSL_VERIFYPEER: " << getenv("CURLOPT_SSL_VERIFYPEER") << endl; \
-} \
-if (getenv("CURLOPT_CAINFO")){ \
-curl_easy_setopt(curl, CURLOPT_CAINFO, getenv("CURLOPT_CAINFO") ); \
-cout << "CURLOPT_CAINFO: " << getenv("CURLOPT_CAINFO") << endl; \
-} \
-if (getenv("CURLOPT_FOLLOWLOCATION")){ \
-curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, (long) atol(getenv("CURLOPT_FOLLOWLOCATION")) ); \
-cout << "CURLOPT_FOLLOWLOCATION: " << getenv("CURLOPT_FOLLOWLOCATION") << endl; \
-} \
-if (getenv("CURLOPT_FAILONERROR")){ \
-curl_easy_setopt(curl, CURLOPT_FAILONERROR, (long) atol(getenv("CURLOPT_FAILONERROR")) ); \
-cout << "CURLOPT_FAILONERROR: " << getenv("CURLOPT_FAILONERROR") << endl; \
-}
+// # define GLOBAL_CURL_ENVIROMENT_OPTIONS \
+// if (getenv("CURLOPT_PROXYAUTH")){ \
+// curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY); \
+// cout << "CURLOPT_PROXYAUTH: " << getenv("CURLOPT_PROXYAUTH") << endl; \
+// } \
+// if (getenv("CURLOPT_SSL_VERIFYPEER")){ \
+// curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, (long) atol(getenv("CURLOPT_SSL_VERIFYPEER")) ); \
+// cout << "CURLOPT_SSL_VERIFYPEER: " << getenv("CURLOPT_SSL_VERIFYPEER") << endl; \
+// } \
+// if (getenv("CURLOPT_CAINFO")){ \
+// curl_easy_setopt(curl, CURLOPT_CAINFO, getenv("CURLOPT_CAINFO") ); \
+// cout << "CURLOPT_CAINFO: " << getenv("CURLOPT_CAINFO") << endl; \
+// } \
+// if (getenv("CURLOPT_FOLLOWLOCATION")){ \
+// curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, (long) atol(getenv("CURLOPT_FOLLOWLOCATION")) ); \
+// cout << "CURLOPT_FOLLOWLOCATION: " << getenv("CURLOPT_FOLLOWLOCATION") << endl; \
+// } \
+// if (getenv("CURLOPT_FAILONERROR")){ \
+// curl_easy_setopt(curl, CURLOPT_FAILONERROR, (long) atol(getenv("CURLOPT_FAILONERROR")) ); \
+// cout << "CURLOPT_FAILONERROR: " << getenv("CURLOPT_FAILONERROR") << endl; \
+// }
 
 struct MemoryStruct {
     char *data;
@@ -70,12 +70,6 @@ struct MemoryStruct {
 
 static size_t
 WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data) {
-    cout << "IN MEMORY CALLBACK" << endl;
-    cout << "ptr: " << ptr << endl;
-    cout << "size: " << size << endl;
-    cout << "nmemb: " << nmemb << endl;
-    cout << "data: " << data << endl;
-
 
     size_t realsize = size * nmemb;
     struct MemoryStruct *mem = (struct MemoryStruct *)data;
@@ -86,16 +80,6 @@ WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data) {
         mem->size += realsize;
         mem->data[mem->size] = 0;
     }
-
-    cout << "----" << endl;
-    cout << "ptr: " << ptr << endl;
-    cout << "size: " << size << endl;
-    cout << "nmemb: " << nmemb << endl;
-    cout << "data: " << data << endl;
-    cout << "realsize: " << realsize << endl;
-
-
-
     return realsize;
 }
 
@@ -135,40 +119,43 @@ ReadMemoryCallbackAndCall(void *ptr, size_t size, size_t nmemb, void *data) {
  * @param customheader specify custom HTTP header (or NULL for none)
  * @return returned HTTP
  */
-char *ofx_oauth_curl_post (const char *u, const char *p, const char *customheader) {
-    CURL *curl;
-    CURLcode res;
-    struct curl_slist *slist=NULL;
+// char *ofx_oauth_curl_post (const char *u, const char *p, const char *customheader) {
+//     CURL *curl;
+//     CURLcode res;
+//     struct curl_slist *slist=NULL;
 
-    struct MemoryStruct chunk;
-    chunk.data=NULL;
-    chunk.size = 0;
+//     struct MemoryStruct chunk;
+//     chunk.data=NULL;
+//     chunk.size = 0;
 
-    curl = curl_easy_init();
-    if(!curl) return NULL;
-    curl_easy_setopt(curl, CURLOPT_URL, u);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, p);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-    if (customheader) {
-        slist = curl_slist_append(slist, customheader);
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-    }
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
-#ifdef OAUTH_CURL_TIMEOUT
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
-    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-#endif
-    GLOBAL_CURL_ENVIROMENT_OPTIONS;
-    res = curl_easy_perform(curl);
-    curl_slist_free_all(slist);
-    if (res) {
-        return NULL;
-    }
+//     curl = curl_easy_init();
+//     if(!curl) return NULL;
+//     curl_easy_setopt(curl, CURLOPT_URL, u);
+//     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, p);
+    
+//     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
 
-    curl_easy_cleanup(curl);
-    return (chunk.data);
-}
+//     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+    
+//     if (customheader) {
+//         slist = curl_slist_append(slist, customheader);
+//         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+//     }
+//     curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
+// #ifdef OAUTH_CURL_TIMEOUT
+//     curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
+//     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+// #endif
+//     GLOBAL_CURL_ENVIROMENT_OPTIONS;
+//     res = curl_easy_perform(curl);
+//     curl_slist_free_all(slist);
+//     if (res) {
+//         return NULL;
+//     }
+
+//     curl_easy_cleanup(curl);
+//     return (chunk.data);
+// }
 
 /**
  * cURL http get function.
@@ -179,7 +166,7 @@ char *ofx_oauth_curl_post (const char *u, const char *p, const char *customheade
  * @param customheader specify custom HTTP header (or NULL for none)
  * @return returned HTTP
  */
-char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader) {
+char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader, const char* SSLCACertificateFile) {
 
     cout << "in here" << endl;
 
@@ -203,6 +190,8 @@ char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader
         return NULL;
     }
 
+    // GLOBAL_CURL_ENVIROMENT_OPTIONS;
+
     cout << "URL TO CHECK " << (q ? t1:u) << endl;
 
     curl_easy_setopt(curl, CURLOPT_URL, q ? t1:u);
@@ -224,9 +213,39 @@ char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader
 //     curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
 //     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
 // #endif
-    GLOBAL_CURL_ENVIROMENT_OPTIONS;
+    // GLOBAL_CURL_ENVIROMENT_OPTIONS;
+
+    char errorBuffer[1024];
+
+    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer);
+
+// THIS IS A BAD INSECURE WORKAROUND BECAUSE curl on linux64 isn't cooperating ...
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER , FALSE);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST , FALSE);
+
+    curl_easy_setopt(curl, CURLOPT_CAINFO , SSLCACertificateFile);
+
+    cout << "SSLCACertificateFile: " << SSLCACertificateFile << endl;
+
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+
+    // if (getenv("CURLOPT_CAINFO"))
+    // { 
+        // curl_easy_setopt(curl, CURLOPT_CAINFO, getenv("CURLOPT_CAINFO") ); 
+    //     // cout << "CURLOPT_CAINFO: " << getenv("CURLOPT_CAINFO") << endl; \
+    // }   
+
+
+
     res = curl_easy_perform(curl);
     curl_slist_free_all(slist);
+
+    if(strlen(errorBuffer) > 0)
+    {
+        cout << "ERROR: "<< errorBuffer << endl;
+    }
+
+
     if (q) {
         free(t1);
     }
@@ -253,56 +272,56 @@ char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader
  * @param customheader specify custom HTTP header (or NULL for default)
  * @return returned HTTP or NULL on error
  */
-char *ofx_oauth_curl_post_file (const char *u, const char *fn, size_t len, const char *customheader) {
-    CURL *curl;
-    CURLcode res;
-    struct curl_slist *slist=NULL;
-    struct MemoryStruct chunk;
-    FILE *f;
+// char *ofx_oauth_curl_post_file (const char *u, const char *fn, size_t len, const char *customheader) {
+//     CURL *curl;
+//     CURLcode res;
+//     struct curl_slist *slist=NULL;
+//     struct MemoryStruct chunk;
+//     FILE *f;
 
-    chunk.data=NULL;
-    chunk.size=0;
+//     chunk.data=NULL;
+//     chunk.size=0;
 
-    if (customheader)
-        slist = curl_slist_append(slist, customheader);
-    else
-        slist = curl_slist_append(slist, "Content-Type: image/jpeg;");
+//     if (customheader)
+//         slist = curl_slist_append(slist, customheader);
+//     else
+//         slist = curl_slist_append(slist, "Content-Type: image/jpeg;");
 
-    if (!len) {
-        struct stat statbuf;
-        if (stat(fn, &statbuf) == -1) return(NULL);
-        len = statbuf.st_size;
-    }
+//     if (!len) {
+//         struct stat statbuf;
+//         if (stat(fn, &statbuf) == -1) return(NULL);
+//         len = statbuf.st_size;
+//     }
 
-    f = fopen(fn,"r");
-    if (!f) return NULL;
+//     f = fopen(fn,"r");
+//     if (!f) return NULL;
 
-    curl = curl_easy_init();
-    if(!curl) return NULL;
-    curl_easy_setopt(curl, CURLOPT_URL, u);
-    curl_easy_setopt(curl, CURLOPT_POST, 1);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, len);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-    curl_easy_setopt(curl, CURLOPT_READDATA, f);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
-#ifdef OAUTH_CURL_TIMEOUT
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
-    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-#endif
-    GLOBAL_CURL_ENVIROMENT_OPTIONS;
-    res = curl_easy_perform(curl);
-    curl_slist_free_all(slist);
-    if (res) {
-        // error
-        return NULL;
-    }
-    fclose(f);
+//     curl = curl_easy_init();
+//     if(!curl) return NULL;
+//     curl_easy_setopt(curl, CURLOPT_URL, u);
+//     curl_easy_setopt(curl, CURLOPT_POST, 1);
+//     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, len);
+//     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+//     curl_easy_setopt(curl, CURLOPT_READDATA, f);
+//     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+//     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+//     curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
+// #ifdef OAUTH_CURL_TIMEOUT
+//     curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
+//     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+// #endif
+//     GLOBAL_CURL_ENVIROMENT_OPTIONS;
+//     res = curl_easy_perform(curl);
+//     curl_slist_free_all(slist);
+//     if (res) {
+//         // error
+//         return NULL;
+//     }
+//     fclose(f);
 
-    curl_easy_cleanup(curl);
-    return (chunk.data);
-}
+//     curl_easy_cleanup(curl);
+//     return (chunk.data);
+// }
 
 /**
  * http send raw data, with callback.
@@ -318,62 +337,62 @@ char *ofx_oauth_curl_post_file (const char *u, const char *fn, size_t len, const
  * @param callback_data specify data to pass to the callback function
  * @return returned HTTP reply or NULL on error
  */
-char *ofx_oauth_curl_send_data_with_callback (const char *u, const char *data, size_t len, const char *customheader, void (*callback)(void*,int,size_t,size_t), void *callback_data, const char *httpMethod) {
-    CURL *curl;
-    CURLcode res;
-    struct curl_slist *slist=NULL;
-    struct MemoryStruct chunk;
-    struct MemoryStruct rdnfo;
+// char *ofx_oauth_curl_send_data_with_callback (const char *u, const char *data, size_t len, const char *customheader, void (*callback)(void*,int,size_t,size_t), void *callback_data, const char *httpMethod) {
+//     CURL *curl;
+//     CURLcode res;
+//     struct curl_slist *slist=NULL;
+//     struct MemoryStruct chunk;
+//     struct MemoryStruct rdnfo;
 
-    chunk.data=NULL;
-    chunk.size=0;
-    chunk.start_size=0;
-    chunk.callback=callback;
-    chunk.callback_data=callback_data;
-    rdnfo.data=(char *)data;
-    rdnfo.size=len;
-    rdnfo.start_size=len;
-    rdnfo.callback=callback;
-    rdnfo.callback_data=callback_data;
+//     chunk.data=NULL;
+//     chunk.size=0;
+//     chunk.start_size=0;
+//     chunk.callback=callback;
+//     chunk.callback_data=callback_data;
+//     rdnfo.data=(char *)data;
+//     rdnfo.size=len;
+//     rdnfo.start_size=len;
+//     rdnfo.callback=callback;
+//     rdnfo.callback_data=callback_data;
 
-    if (customheader)
-        slist = curl_slist_append(slist, customheader);
-    else
-        slist = curl_slist_append(slist, "Content-Type: image/jpeg;");
+//     if (customheader)
+//         slist = curl_slist_append(slist, customheader);
+//     else
+//         slist = curl_slist_append(slist, "Content-Type: image/jpeg;");
 
-    curl = curl_easy_init();
-    if(!curl) return NULL;
-    curl_easy_setopt(curl, CURLOPT_URL, u);
-    curl_easy_setopt(curl, CURLOPT_POST, 1);
-    if (httpMethod) curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, httpMethod);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, len);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-    curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&rdnfo);
-    if (callback)
-        curl_easy_setopt(curl, CURLOPT_READFUNCTION, ReadMemoryCallbackAndCall);
-    else
-        curl_easy_setopt(curl, CURLOPT_READFUNCTION, ReadMemoryCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
-    if (callback)
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallbackAndCall);
-    else
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
-#ifdef OAUTH_CURL_TIMEOUT
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
-    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-#endif
-    GLOBAL_CURL_ENVIROMENT_OPTIONS;
-    res = curl_easy_perform(curl);
-    curl_slist_free_all(slist);
-    if (res) {
-        // error
-        return NULL;
-    }
+//     curl = curl_easy_init();
+//     if(!curl) return NULL;
+//     curl_easy_setopt(curl, CURLOPT_URL, u);
+//     curl_easy_setopt(curl, CURLOPT_POST, 1);
+//     if (httpMethod) curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, httpMethod);
+//     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, len);
+//     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+//     curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&rdnfo);
+//     if (callback)
+//         curl_easy_setopt(curl, CURLOPT_READFUNCTION, ReadMemoryCallbackAndCall);
+//     else
+//         curl_easy_setopt(curl, CURLOPT_READFUNCTION, ReadMemoryCallback);
+//     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+//     if (callback)
+//         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallbackAndCall);
+//     else
+//         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+//     curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
+// #ifdef OAUTH_CURL_TIMEOUT
+//     curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
+//     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+// #endif
+//     GLOBAL_CURL_ENVIROMENT_OPTIONS;
+//     res = curl_easy_perform(curl);
+//     curl_slist_free_all(slist);
+//     if (res) {
+//         // error
+//         return NULL;
+//     }
 
-    curl_easy_cleanup(curl);
-    return (chunk.data);
-}
+//     curl_easy_cleanup(curl);
+//     return (chunk.data);
+// }
 
 /**
  * http post raw data.
@@ -387,17 +406,17 @@ char *ofx_oauth_curl_send_data_with_callback (const char *u, const char *data, s
  * @param customheader specify custom HTTP header (or NULL for default)
  * @return returned HTTP reply or NULL on error
  */
-char *ofx_oauth_curl_post_data(const char *u, const char *data, size_t len, const char *customheader) {
-    return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, NULL, NULL, NULL);
-}
+// char *ofx_oauth_curl_post_data(const char *u, const char *data, size_t len, const char *customheader) {
+//     return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, NULL, NULL, NULL);
+// }
 
-char *ofx_oauth_curl_send_data (const char *u, const char *data, size_t len, const char *customheader, const char *httpMethod) {
-    return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, NULL, NULL, httpMethod);
-}
+// char *ofx_oauth_curl_send_data (const char *u, const char *data, size_t len, const char *customheader, const char *httpMethod) {
+//     return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, NULL, NULL, httpMethod);
+// }
 
-char *ofx_oauth_curl_post_data_with_callback (const char *u, const char *data, size_t len, const char *customheader, void (*callback)(void*,int,size_t,size_t), void *callback_data) {
-    return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, callback, callback_data, NULL);
-}
+// char *ofx_oauth_curl_post_data_with_callback (const char *u, const char *data, size_t len, const char *customheader, void (*callback)(void*,int,size_t,size_t), void *callback_data) {
+//     return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, callback, callback_data, NULL);
+// }
 
 /**
  * do a HTTP GET request, wait for it to finish
@@ -410,12 +429,12 @@ char *ofx_oauth_curl_post_data_with_callback (const char *u, const char *data, s
  * @return  In case of an error NULL is returned; otherwise a pointer to the
  * replied content from HTTP server. latter needs to be freed by caller.
  */
-char *ofx_oauth_http_get2 (const char *u, const char *q, const char *customheader) {
+char *ofx_oauth_http_get2 (const char *u, const char *q, const char *customheader,const char* SSLCACertificateFile) {
 #ifdef HAVE_CURL
 
     cout << "==================THIS IS THE INSIDE OF THE THE FUNCTION " << endl;
 
-    return ofx_oauth_curl_get(u,q,customheader);
+    return ofx_oauth_curl_get(u,q,customheader,SSLCACertificateFile);
 #else
     return NULL;
 #endif
@@ -430,8 +449,8 @@ ofxOAuth::ofxOAuth(): ofxOAuthVerifierCallbackInterface()
     oauthMethod = OFX_OA_HMAC;  // default
     httpMethod  = OFX_HTTP_GET; // default
 
-    const char* v = getenv("CURLOPT_CAINFO");
-    if(0 != v) _old_curlopt_cainfo = v;
+    // const char* v = getenv("CURLOPT_CAINFO");
+    // if(0 != v) _old_curlopt_cainfo = v;
     
     // this Certificate Authority bundle is extracted 
     // from mozilla.org.pem, which can be found here
@@ -443,7 +462,12 @@ ofxOAuth::ofxOAuth(): ofxOAuthVerifierCallbackInterface()
     // directory, an different location can 
     // can be set by calling:
     
-    setSSLCACertificateFile("cacert.pem");
+    // cout << "OLD_CURLOPT_CAINFO" << getenv("CURLOPT_CAINFO") << endl;
+
+    // setSSLCACertificateFile("cacert.pem");
+    setSSLCACertificateFile("certdata.txt");
+
+    // cout << "NEW_CURLOPT_CAINFO" << getenv("CURLOPT_CAINFO") << endl;
     
     // this setter sets an environmental variable,
     // which is accessed by liboauth whenever libcurl
@@ -470,14 +494,14 @@ ofxOAuth::~ofxOAuth()
 {
     // be nice and set it back, if there was 
     // something there when we started.
-    if(!_old_curlopt_cainfo.empty())
-    {
-        setenv("CURLOPT_CAINFO",_old_curlopt_cainfo.c_str(),true);
-    }
-    else
-    {
-        unsetenv("CURLOPT_CAINFO");
-    }
+    // if(!_old_curlopt_cainfo.empty())
+    // {
+    //     setenv("CURLOPT_CAINFO",_old_curlopt_cainfo.c_str(),true);
+    // }
+    // else
+    // {
+    //     unsetenv("CURLOPT_CAINFO");
+    // }
 
     ofRemoveListener(ofEvents().update,this,&ofxOAuth::update);
 }
@@ -711,7 +735,8 @@ std::string ofxOAuth::get(const std::string& uri, const std::string& query)
 
     char* p_reply = ofx_oauth_http_get2(req_url.c_str(),   // the base url to get
                                         0,              // the query string to send
-                                        http_hdr.c_str()); // Authorization header is included here
+                                        http_hdr.c_str(),
+                                        SSLCACertificateFile.c_str()); // Authorization header is included here
 
     if(0 != p_reply)
     {
@@ -879,9 +904,14 @@ std::map<std::string, std::string> ofxOAuth::obtainRequestToken()
     ofLogVerbose("ofxOAuth::obtainRequestToken") << "Request HEADER = " << req_hdr;
     ofLogVerbose("ofxOAuth::obtainRequestToken") << "http    HEADER = " << http_hdr;
     
+
+
+
+
     char* p_reply = ofx_oauth_http_get2(req_url.c_str(),   // the base url to get
                                     0,              // the query string to send
-                                    http_hdr.c_str()); // Authorization header is included here
+                                    http_hdr.c_str(),
+                                        SSLCACertificateFile.c_str()); // Authorization header is included here
 
     if(0 != p_reply)
     {
@@ -1086,7 +1116,8 @@ std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
     
     char* p_reply = ofx_oauth_http_get2(req_url.c_str(),   // the base url to get
                                      0,              // the query string to send
-                                     http_hdr.c_str()); // Authorization header is included here
+                                     http_hdr.c_str(),
+                                        SSLCACertificateFile.c_str()); // Authorization header is included here
     
     if(0 != p_reply)
     {
@@ -1681,8 +1712,11 @@ void ofxOAuth::setOAuthMethod(AuthMethod _oauthMethod)
 //------------------------------------------------------------------------------
 void ofxOAuth::setSSLCACertificateFile(const std::string& pathname)
 {
-    SSLCACertificateFile = pathname;
-    setenv("CURLOPT_CAINFO", ofToDataPath(SSLCACertificateFile).c_str(), true);
+        SSLCACertificateFile = ofToDataPath(pathname,true);
+
+    // setenv("CURLOPT_CAINFO", ofToDataPath(SSLCACertificateFile,true).c_str(), true);
+
+    cout << "just set CACERT to : " << SSLCACertificateFile << endl;
 }
 
 //------------------------------------------------------------------------------
