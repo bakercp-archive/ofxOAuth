@@ -337,7 +337,7 @@ std::string ofxOAuth::get(const std::string& uri, const std::string& query)
 //------------------------------------------------------------------------------
 std::string ofxOAuth::post(const std::string& uri, const std::string& query)
 {
-    string result = "";
+    std::string result = "";
     // TODO: well, this whole method ...
     ofLogWarning("ofxOAuth::post") << "This method is not implemented, returning empty string.";
     return result;
@@ -346,7 +346,7 @@ std::string ofxOAuth::post(const std::string& uri, const std::string& query)
 //------------------------------------------------------------------------------
 std::map<std::string, std::string> ofxOAuth::obtainRequestToken()
 {
-    map<std::string, std::string> returnParams;
+    std::map<std::string, std::string> returnParams;
 
     if(requestTokenURL.empty())
     {
