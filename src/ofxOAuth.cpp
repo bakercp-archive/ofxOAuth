@@ -270,11 +270,23 @@ std::string ofxOAuth::get(const std::string& uri, const std::string& query)
     ofLogVerbose("ofxOAuth::get") << "-------------------";
 
     // collect any parameters in our list that need to be placed in the request URI
-    req_url = oauth_serialize_url_sep(argc, 0, argv, const_cast<char *>("&"), 1); 
-    
+    char* p_req_url = oauth_serialize_url_sep(argc, 0, argv, const_cast<char *>("&"), 1);
+
+    if(0 != p_req_url)
+    {
+        req_url = p_req_url;
+        free(p_req_url);
+    }
+
     // collect any of the oauth parameters for inclusion in the HTTP Authorization header.
-    req_hdr = oauth_serialize_url_sep(argc, 1, argv, const_cast<char *>(", "), 6); // const_cast<char *>() is to avoid Deprecated 
-    
+    char* p_req_hdr = oauth_serialize_url_sep(argc, 1, argv, const_cast<char *>(", "), 6); // const_cast<char *>() is to avoid Deprecated
+
+    if(0 != p_req_hdr)
+    {
+        req_hdr = p_req_hdr;
+        free(p_req_hdr);
+    }
+
     // look at url parameters to be signed if you want.
     if(ofGetLogLevel() <= OF_LOG_VERBOSE)
         for (int i=0;i<argc; i++) ofLogVerbose("ofxOAuth::get") << " : " << i << ":" << argv[i];
@@ -298,11 +310,17 @@ std::string ofxOAuth::get(const std::string& uri, const std::string& query)
     ofLogVerbose("ofxOAuth::get") << "request URL    >" << req_url << "<";
     ofLogVerbose("ofxOAuth::get") << "request HEADER >" << req_hdr << "<";
     ofLogVerbose("ofxOAuth::get") << "http    HEADER >" << http_hdr << "<";
-    
-    reply = oauth_http_get2(req_url.c_str(),   // the base url to get
-                            0,              // the query string to send
-                            http_hdr.c_str()); // Authorization header is included here
-    
+
+    char* p_reply = oauth_http_get2(req_url.c_str(),   // the base url to get
+                                    0,              // the query string to send
+                                    http_hdr.c_str()); // Authorization header is included here
+
+    if(0 != p_reply)
+    {
+        reply = p_reply;
+        free(p_reply);
+    }
+
     if (reply.empty())
     {
         ofLogVerbose("ofxOAuth::get") << "HTTP get request failed.";
@@ -353,7 +371,7 @@ std::map<std::string, std::string> ofxOAuth::obtainRequestToken()
     std::string http_hdr;
 
     std::string reply;
-    
+
     // oauth_sign_url2 (see oauth.h) in steps
     int  argc   = 0;
     char **argv = 0;
@@ -422,10 +440,22 @@ std::map<std::string, std::string> ofxOAuth::obtainRequestToken()
     ofLogVerbose("ofxOAuth::obtainRequestToken") << "-------------------";
 
     // collect any parameters in our list that need to be placed in the request URI
-    req_url = oauth_serialize_url_sep(argc, 0, argv, const_cast<char *>("&"), 1); 
+    char* p_req_url = oauth_serialize_url_sep(argc, 0, argv, const_cast<char *>("&"), 1);
+
+    if(0 != p_req_url)
+    {
+        req_url = p_req_url;
+        free(p_req_url);
+    }
 
     // collect any of the oauth parameters for inclusion in the HTTP Authorization header.
-    req_hdr = oauth_serialize_url_sep(argc, 1, argv, const_cast<char *>(", "), 6); // const_cast<char *>() is to avoid Deprecated 
+    char* p_req_hdr = oauth_serialize_url_sep(argc, 1, argv, const_cast<char *>(", "), 6); // const_cast<char *>() is to avoid Deprecated
+
+    if(0 != p_req_hdr)
+    {
+        req_hdr = p_req_hdr;
+        free(p_req_hdr);
+    }
 
     // look at url parameters to be signed if you want.
     if(ofGetLogLevel() <= OF_LOG_VERBOSE)
@@ -451,10 +481,16 @@ std::map<std::string, std::string> ofxOAuth::obtainRequestToken()
     ofLogVerbose("ofxOAuth::obtainRequestToken") << "Request HEADER = " << req_hdr;
     ofLogVerbose("ofxOAuth::obtainRequestToken") << "http    HEADER = " << http_hdr;
     
-    reply = oauth_http_get2(req_url.c_str(),   // the base url to get
-                            0,              // the query string to send
-                            http_hdr.c_str()); // Authorization header is included here
-    
+    char* p_reply = oauth_http_get2(req_url.c_str(),   // the base url to get
+                                    0,              // the query string to send
+                                    http_hdr.c_str()); // Authorization header is included here
+
+    if(0 != p_reply)
+    {
+        reply = p_reply;
+        free(p_req_hdr);
+    }
+
     if (reply.empty())
     {
         ofLogVerbose("ofxOAuth::obtainRequestToken") << "HTTP request for an oauth request-token failed.";
@@ -604,11 +640,23 @@ std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
     ofLogVerbose("ofxOAuth::obtainAccessToken") << "-------------------";
     
     // collect any parameters in our list that need to be placed in the request URI
-    req_url = oauth_serialize_url_sep(argc, 0, argv, const_cast<char *>("&"), 1); 
+    char* p_req_url = oauth_serialize_url_sep(argc, 0, argv, const_cast<char *>("&"), 1);
+
+    if(0 != p_req_url)
+    {
+        req_url = p_req_url;
+        free(p_req_url);
+    }
     
     // collect any of the oauth parameters for inclusion in the HTTP Authorization header.
-    req_hdr = oauth_serialize_url_sep(argc, 1, argv, const_cast<char *>(", "), 6); // const_cast<char *>() is to avoid Deprecated 
-    
+    char* p_req_hdr = oauth_serialize_url_sep(argc, 1, argv, const_cast<char *>(", "), 6); // const_cast<char *>() is to avoid Deprecated
+
+    if(0 != p_req_hdr)
+    {
+        req_hdr = p_req_hdr;
+        free(p_req_hdr);
+    }
+
     // look at url parameters to be signed if you want.
     if(ofGetLogLevel() <= OF_LOG_VERBOSE)
     {
@@ -638,11 +686,16 @@ std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
     ofLogVerbose("ofxOAuth::obtainAccessToken") << "request HEADER >" << req_hdr << "<";
     ofLogVerbose("ofxOAuth::obtainAccessToken") << "http    HEADER >" << http_hdr << "<";
     
-    reply = oauth_http_get2(req_url.c_str(),   // the base url to get
-                            0,              // the query string to send
-                            http_hdr.c_str()); // Authorization header is included here
+    char* p_reply = oauth_http_get2(req_url.c_str(),   // the base url to get
+                                     0,              // the query string to send
+                                     http_hdr.c_str()); // Authorization header is included here
     
-    
+    if(0 != p_reply)
+    {
+        reply = p_reply;
+        free(p_reply);
+    }
+
     if (reply.empty())
     {
         ofLogVerbose("ofxOAuth::obtainAccessToken") << "HTTP request for an oauth request-token failed.";
