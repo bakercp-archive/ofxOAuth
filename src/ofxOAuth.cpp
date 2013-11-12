@@ -25,6 +25,368 @@
 
 #include "ofxOAuth.h"
 
+#define HAVE_CURL 1
+
+#ifdef HAVE_CURL /* HTTP requests via libcurl */
+//#include "xmalloc.h"
+
+#define VERSION 1.0.0
+
+#define OAUTH_USER_AGENT "liboauth-agent/1.0.1"
+
+#include <curl/curl.h>
+#include <sys/stat.h>
+
+# define GLOBAL_CURL_ENVIROMENT_OPTIONS \
+if (getenv("CURLOPT_PROXYAUTH")){ \
+curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY); \
+} \
+if (getenv("CURLOPT_SSL_VERIFYPEER")){ \
+curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, (long) atol(getenv("CURLOPT_SSL_VERIFYPEER")) ); \
+} \
+if (getenv("CURLOPT_CAINFO")){ \
+curl_easy_setopt(curl, CURLOPT_CAINFO, getenv("CURLOPT_CAINFO") ); \
+} \
+if (getenv("CURLOPT_FOLLOWLOCATION")){ \
+curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, (long) atol(getenv("CURLOPT_FOLLOWLOCATION")) ); \
+} \
+if (getenv("CURLOPT_FAILONERROR")){ \
+curl_easy_setopt(curl, CURLOPT_FAILONERROR, (long) atol(getenv("CURLOPT_FAILONERROR")) ); \
+}
+
+struct MemoryStruct {
+    char *data;
+    size_t size; //< bytes remaining (r), bytes accumulated (w)
+
+    size_t start_size; //< only used with ..AndCall()
+    void (*callback)(void*,int,size_t,size_t); //< only used with ..AndCall()
+    void *callback_data; //< only used with ..AndCall()
+};
+
+static size_t
+WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data) {
+    size_t realsize = size * nmemb;
+    struct MemoryStruct *mem = (struct MemoryStruct *)data;
+
+    mem->data = (char *)realloc(mem->data, mem->size + realsize + 1);
+    if (mem->data) {
+        memcpy(&(mem->data[mem->size]), ptr, realsize);
+        mem->size += realsize;
+        mem->data[mem->size] = 0;
+    }
+    return realsize;
+}
+
+static size_t
+ReadMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data) {
+    struct MemoryStruct *mem = (struct MemoryStruct *)data;
+    size_t realsize = size * nmemb;
+    if (realsize > mem->size) realsize = mem->size;
+    memcpy(ptr, mem->data, realsize);
+    mem->size -= realsize;
+    mem->data += realsize;
+    return realsize;
+}
+
+static size_t
+WriteMemoryCallbackAndCall(void *ptr, size_t size, size_t nmemb, void *data) {
+    struct MemoryStruct *mem = (struct MemoryStruct *)data;
+    size_t ret=WriteMemoryCallback(ptr,size,nmemb,data);
+    mem->callback(mem->callback_data,0,mem->size,mem->size);
+    return ret;
+}
+
+static size_t
+ReadMemoryCallbackAndCall(void *ptr, size_t size, size_t nmemb, void *data) {
+    struct MemoryStruct *mem = (struct MemoryStruct *)data;
+    size_t ret=ReadMemoryCallback(ptr,size,nmemb,data);
+    mem->callback(mem->callback_data,1,mem->start_size-mem->size,mem->start_size);
+    return ret;
+}
+
+/**
+ * cURL http post function.
+ * the returned string (if not NULL) needs to be freed by the caller
+ *
+ * @param u url to retrieve
+ * @param p post parameters
+ * @param customheader specify custom HTTP header (or NULL for none)
+ * @return returned HTTP
+ */
+char *ofx_oauth_curl_post (const char *u, const char *p, const char *customheader) {
+    CURL *curl;
+    CURLcode res;
+    struct curl_slist *slist=NULL;
+
+    struct MemoryStruct chunk;
+    chunk.data=NULL;
+    chunk.size = 0;
+
+    curl = curl_easy_init();
+    if(!curl) return NULL;
+    curl_easy_setopt(curl, CURLOPT_URL, u);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, p);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+    if (customheader) {
+        slist = curl_slist_append(slist, customheader);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+    }
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
+#ifdef OAUTH_CURL_TIMEOUT
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+#endif
+    GLOBAL_CURL_ENVIROMENT_OPTIONS;
+    res = curl_easy_perform(curl);
+    curl_slist_free_all(slist);
+    if (res) {
+        return NULL;
+    }
+
+    curl_easy_cleanup(curl);
+    return (chunk.data);
+}
+
+/**
+ * cURL http get function.
+ * the returned string (if not NULL) needs to be freed by the caller
+ *
+ * @param u url to retrieve
+ * @param q optional query parameters
+ * @param customheader specify custom HTTP header (or NULL for none)
+ * @return returned HTTP
+ */
+char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader) {
+
+    cout << "in here" << endl;
+
+    CURL *curl;
+    CURLcode res;
+    struct curl_slist *slist=NULL;
+    char *t1=NULL;
+    struct MemoryStruct chunk;
+
+    if (q) {
+        t1=(char*)malloc(sizeof(char)*(strlen(u)+strlen(q)+2));
+        strcpy(t1,u); strcat(t1,"?"); strcat(t1,q);
+    }
+
+    chunk.data=NULL;
+    chunk.size = 0;
+
+    curl = curl_easy_init();
+    if(!curl) return NULL;
+    curl_easy_setopt(curl, CURLOPT_URL, q?t1:u);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+    if (customheader) {
+        slist = curl_slist_append(slist, customheader);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+    }
+#if 0 // TODO - support request methods..
+    if (0)
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "HEAD");
+    else if (0)
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+#endif
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
+#ifdef OAUTH_CURL_TIMEOUT
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+#endif
+    GLOBAL_CURL_ENVIROMENT_OPTIONS;
+    res = curl_easy_perform(curl);
+    curl_slist_free_all(slist);
+    if (q) free(t1);
+    curl_easy_cleanup(curl);
+
+    if (res) {
+        return NULL;
+    }
+    return (chunk.data);
+}
+
+/**
+ * cURL http post raw data from file.
+ * the returned string needs to be freed by the caller
+ *
+ * @param u url to retrieve
+ * @param fn filename of the file to post along
+ * @param len length of the file in bytes. set to '0' for autodetection
+ * @param customheader specify custom HTTP header (or NULL for default)
+ * @return returned HTTP or NULL on error
+ */
+char *ofx_oauth_curl_post_file (const char *u, const char *fn, size_t len, const char *customheader) {
+    CURL *curl;
+    CURLcode res;
+    struct curl_slist *slist=NULL;
+    struct MemoryStruct chunk;
+    FILE *f;
+
+    chunk.data=NULL;
+    chunk.size=0;
+
+    if (customheader)
+        slist = curl_slist_append(slist, customheader);
+    else
+        slist = curl_slist_append(slist, "Content-Type: image/jpeg;");
+
+    if (!len) {
+        struct stat statbuf;
+        if (stat(fn, &statbuf) == -1) return(NULL);
+        len = statbuf.st_size;
+    }
+
+    f = fopen(fn,"r");
+    if (!f) return NULL;
+
+    curl = curl_easy_init();
+    if(!curl) return NULL;
+    curl_easy_setopt(curl, CURLOPT_URL, u);
+    curl_easy_setopt(curl, CURLOPT_POST, 1);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, len);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+    curl_easy_setopt(curl, CURLOPT_READDATA, f);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
+#ifdef OAUTH_CURL_TIMEOUT
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+#endif
+    GLOBAL_CURL_ENVIROMENT_OPTIONS;
+    res = curl_easy_perform(curl);
+    curl_slist_free_all(slist);
+    if (res) {
+        // error
+        return NULL;
+    }
+    fclose(f);
+
+    curl_easy_cleanup(curl);
+    return (chunk.data);
+}
+
+/**
+ * http send raw data, with callback.
+ * the returned string needs to be freed by the caller
+ *
+ * more documentation in oauth.h
+ *
+ * @param u url to retrieve
+ * @param data data to post along
+ * @param len length of the file in bytes. set to '0' for autodetection
+ * @param customheader specify custom HTTP header (or NULL for default)
+ * @param callback specify the callback function
+ * @param callback_data specify data to pass to the callback function
+ * @return returned HTTP reply or NULL on error
+ */
+char *ofx_oauth_curl_send_data_with_callback (const char *u, const char *data, size_t len, const char *customheader, void (*callback)(void*,int,size_t,size_t), void *callback_data, const char *httpMethod) {
+    CURL *curl;
+    CURLcode res;
+    struct curl_slist *slist=NULL;
+    struct MemoryStruct chunk;
+    struct MemoryStruct rdnfo;
+
+    chunk.data=NULL;
+    chunk.size=0;
+    chunk.start_size=0;
+    chunk.callback=callback;
+    chunk.callback_data=callback_data;
+    rdnfo.data=(char *)data;
+    rdnfo.size=len;
+    rdnfo.start_size=len;
+    rdnfo.callback=callback;
+    rdnfo.callback_data=callback_data;
+
+    if (customheader)
+        slist = curl_slist_append(slist, customheader);
+    else
+        slist = curl_slist_append(slist, "Content-Type: image/jpeg;");
+
+    curl = curl_easy_init();
+    if(!curl) return NULL;
+    curl_easy_setopt(curl, CURLOPT_URL, u);
+    curl_easy_setopt(curl, CURLOPT_POST, 1);
+    if (httpMethod) curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, httpMethod);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, len);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+    curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&rdnfo);
+    if (callback)
+        curl_easy_setopt(curl, CURLOPT_READFUNCTION, ReadMemoryCallbackAndCall);
+    else
+        curl_easy_setopt(curl, CURLOPT_READFUNCTION, ReadMemoryCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+    if (callback)
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallbackAndCall);
+    else
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
+#ifdef OAUTH_CURL_TIMEOUT
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+#endif
+    GLOBAL_CURL_ENVIROMENT_OPTIONS;
+    res = curl_easy_perform(curl);
+    curl_slist_free_all(slist);
+    if (res) {
+        // error
+        return NULL;
+    }
+
+    curl_easy_cleanup(curl);
+    return (chunk.data);
+}
+
+/**
+ * http post raw data.
+ * the returned string needs to be freed by the caller
+ *
+ * more documentation in oauth.h
+ *
+ * @param u url to retrieve
+ * @param data data to post along
+ * @param len length of the file in bytes. set to '0' for autodetection
+ * @param customheader specify custom HTTP header (or NULL for default)
+ * @return returned HTTP reply or NULL on error
+ */
+char *ofx_oauth_curl_post_data(const char *u, const char *data, size_t len, const char *customheader) {
+    return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, NULL, NULL, NULL);
+}
+
+char *ofx_oauth_curl_send_data (const char *u, const char *data, size_t len, const char *customheader, const char *httpMethod) {
+    return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, NULL, NULL, httpMethod);
+}
+
+char *ofx_oauth_curl_post_data_with_callback (const char *u, const char *data, size_t len, const char *customheader, void (*callback)(void*,int,size_t,size_t), void *callback_data) {
+    return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, callback, callback_data, NULL);
+}
+
+/**
+ * do a HTTP GET request, wait for it to finish
+ * and return the content of the reply.
+ * (requires libcurl)
+ *
+ * @param u base url to get
+ * @param q query string to send along with the HTTP request or NULL.
+ * @param customheader specify custom HTTP header (or NULL for none)
+ * @return  In case of an error NULL is returned; otherwise a pointer to the
+ * replied content from HTTP server. latter needs to be freed by caller.
+ */
+char *ofx_oauth_http_get2 (const char *u, const char *q, const char *customheader) {
+#ifdef HAVE_CURL
+
+    cout << "==================THIS IS THE INSIDE OF THE THE FUNCTION " << endl;
+
+    return ofx_oauth_curl_get(u,q,customheader);
+#else
+    return NULL;
+#endif
+}
+
+#endif // libcURL.
+
 
 //------------------------------------------------------------------------------
 ofxOAuth::ofxOAuth(): ofxOAuthVerifierCallbackInterface()
@@ -311,9 +673,9 @@ std::string ofxOAuth::get(const std::string& uri, const std::string& query)
     ofLogVerbose("ofxOAuth::get") << "request HEADER >" << req_hdr << "<";
     ofLogVerbose("ofxOAuth::get") << "http    HEADER >" << http_hdr << "<";
 
-    char* p_reply = oauth_http_get2(req_url.c_str(),   // the base url to get
-                                    0,              // the query string to send
-                                    http_hdr.c_str()); // Authorization header is included here
+    char* p_reply = ofx_oauth_http_get2(req_url.c_str(),   // the base url to get
+                                        0,              // the query string to send
+                                        http_hdr.c_str()); // Authorization header is included here
 
     if(0 != p_reply)
     {
@@ -481,7 +843,7 @@ std::map<std::string, std::string> ofxOAuth::obtainRequestToken()
     ofLogVerbose("ofxOAuth::obtainRequestToken") << "Request HEADER = " << req_hdr;
     ofLogVerbose("ofxOAuth::obtainRequestToken") << "http    HEADER = " << http_hdr;
     
-    char* p_reply = oauth_http_get2(req_url.c_str(),   // the base url to get
+    char* p_reply = ofx_oauth_http_get2(req_url.c_str(),   // the base url to get
                                     0,              // the query string to send
                                     http_hdr.c_str()); // Authorization header is included here
 
@@ -686,7 +1048,7 @@ std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
     ofLogVerbose("ofxOAuth::obtainAccessToken") << "request HEADER >" << req_hdr << "<";
     ofLogVerbose("ofxOAuth::obtainAccessToken") << "http    HEADER >" << http_hdr << "<";
     
-    char* p_reply = oauth_http_get2(req_url.c_str(),   // the base url to get
+    char* p_reply = ofx_oauth_http_get2(req_url.c_str(),   // the base url to get
                                      0,              // the query string to send
                                      http_hdr.c_str()); // Authorization header is included here
     
