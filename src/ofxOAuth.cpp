@@ -886,7 +886,7 @@ std::map<std::string, std::string> ofxOAuth::obtainRequestToken()
     if(0 != p_reply)
     {
         reply = p_reply;
-        free(p_req_hdr);
+        free(p_reply);
     }
 
     if (reply.empty())
