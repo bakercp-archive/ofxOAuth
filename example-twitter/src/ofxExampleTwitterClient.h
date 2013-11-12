@@ -52,7 +52,7 @@ public:
     // This method is just an example of whatyour calls might look like.
     std::string exampleMethod()
     {
-        return get("/1.1/statuses/retweets_of_me.json");
+        return get("/1.1/search/tweets.json?q=openFrameworks");
     }
 
 };
