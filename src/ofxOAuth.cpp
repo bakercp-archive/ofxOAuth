@@ -210,8 +210,8 @@ char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader
 // #endif
     curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
 // #ifdef OAUTH_CURL_TIMEOUT
-//     curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
-//     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+    // curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
 // #endif
     // GLOBAL_CURL_ENVIROMENT_OPTIONS;
 
