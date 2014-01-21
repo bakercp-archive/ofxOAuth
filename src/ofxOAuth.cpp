@@ -735,9 +735,141 @@ std::string ofxOAuth::get(const std::string& uri, const std::string& query)
 //------------------------------------------------------------------------------
 std::string ofxOAuth::post(const std::string& uri, const std::string& query)
 {
+    
     std::string result = "";
-    // TODO: well, this whole method ...
-    ofLogWarning("ofxOAuth::post") << "This method is not implemented, returning empty string.";
+    
+    if(apiURL.empty())
+    {
+        ofLogError("ofxOAuth::post") << "No api URL specified.";
+        return result;
+    }
+    
+    if(consumerKey.empty())
+    {
+        ofLogError("ofxOAuth::post") << "No consumer key specified.";
+        return result;
+    }
+    
+    if(consumerSecret.empty())
+    {
+        ofLogError("ofxOAuth::post") << "No consumer secret specified.";
+        return result;
+    }
+    
+    if(accessToken.empty())
+    {
+        ofLogError("ofxOAuth::post") << "No access token specified.";
+        return result;
+    }
+    
+    if(accessTokenSecret.empty())
+    {
+        ofLogError("ofxOAuth::post") << "No access token secret specified.";
+        return result;
+    }
+    
+    std::string req_url;
+    std::string req_hdr;
+    std::string http_hdr;
+    
+    std::string reply;
+    
+    // oauth_sign_url2 (see oauth.h) in steps
+    int  argc   = 0;
+    char **argv = 0;
+    
+    // break apart the url parameters to they can be signed below
+    // if desired we can also pass in additional patermeters (like oath* params)
+    // here.  For instance, if ?oauth_callback=XXX is defined in this url,
+    // it will be parsed and used in the Authorization header.
+    
+    std::string url = apiURL + uri + "?" + query;
+    
+    argc = oauth_split_url_parameters(url.c_str(), &argv);
+    
+    // sign the array.
+    oauth_sign_array2_process(&argc,
+                              &argv,
+                              0, //< postargs (unused)
+                              _getOAuthMethod(), // hash type, OA_HMAC, OA_RSA, OA_PLAINTEXT
+                              "POST", //< HTTP method (defaults to "GET")
+                              consumerKey.c_str(), //< consumer key - posted plain text
+                              consumerSecret.c_str(), //< consumer secret - used as 1st part of secret-key
+                              accessToken.c_str(),  //< token key - posted plain text in URL
+                              accessTokenSecret.c_str()); //< token secret - used as 2st part of secret-key
+    
+    ofLogVerbose("ofxOAuth::post") << "-------------------";
+    ofLogVerbose("ofxOAuth::post") << "consumerKey          >" << consumerKey << "<";
+    ofLogVerbose("ofxOAuth::post") << "consumerSecret       >" << consumerSecret << "<";
+    ofLogVerbose("ofxOAuth::post") << "requestToken         >" << requestToken << "<";
+    ofLogVerbose("ofxOAuth::post") << "requestTokenVerifier >" << requestTokenVerifier << "<";
+    ofLogVerbose("ofxOAuth::post") << "requestTokenSecret   >" << requestTokenSecret << "<";
+    ofLogVerbose("ofxOAuth::post") << "accessToken          >" << accessToken << "<";
+    ofLogVerbose("ofxOAuth::post") << "accessTokenSecret    >" << accessTokenSecret << "<";
+    ofLogVerbose("ofxOAuth::post") << "-------------------";
+    
+    // collect any parameters in our list that need to be placed in the request URI
+    char* p_req_url = oauth_serialize_url_sep(argc, 0, argv, const_cast<char *>("&"), 1);
+    
+    if(0 != p_req_url)
+    {
+        req_url = p_req_url;
+        free(p_req_url);
+    }
+
+    // collect any of the oauth parameters for inclusion in the HTTP Authorization header.
+    char* p_req_hdr = oauth_serialize_url_sep(argc, 1, argv, const_cast<char *>(", "), 2); // const_cast<char *>() is to avoid Deprecated
+    
+    if(0 != p_req_hdr)
+    {
+        req_hdr = p_req_hdr;
+        free(p_req_hdr);
+    }
+    
+    // look at url parameters to be signed if you want.
+    if(ofGetLogLevel() <= OF_LOG_VERBOSE)
+        for (int i=0;i<argc; i++) ofLogVerbose("ofxOAuth::post") << " : " << i << ":" << argv[i];
+    
+    // free our parameter arrays that were allocated during parsing above
+    oauth_free_array(&argc, &argv);
+    
+    // construct the Authorization header.  Include realm information if available.
+    if(!realm.empty())
+    {
+        // Note that (optional) 'realm' is not to be
+        // included in the oauth signed parameters and thus only added here.
+        // see 9.1.1 in http://oauth.net/core/1.0/#anchor14
+        http_hdr = "Authorization: OAuth realm=\"" + realm + "\", " + req_hdr;
+    }
+    else
+    {
+        http_hdr = "Authorization: OAuth " + req_hdr;
+    }
+    
+    ofLogVerbose("ofxOAuth::post") << "request URL    >" << req_url << "<";
+    ofLogVerbose("ofxOAuth::post") << "request HEADER >" << req_hdr << "<";
+    ofLogVerbose("ofxOAuth::post") << "http    HEADER >" << http_hdr << "<";
+    
+    char* p_reply = ofx_oauth_curl_post(req_url.c_str(),   // the base url to get
+                                        "",              // the query string to send
+                                        http_hdr.c_str()); // Authorization header is included here
+    
+    if(0 != p_reply)
+    {
+        reply = p_reply;
+        free(p_reply);
+    }
+    
+    if (reply.empty())
+    {
+        ofLogVerbose("ofxOAuth::post") << "HTTP get request failed.";
+    }
+    else
+    {
+        ofLogVerbose("ofxOAuth::post") << "HTTP-Reply: " << reply;
+        result = reply;
+    }
+    
     return result;
 }
 
