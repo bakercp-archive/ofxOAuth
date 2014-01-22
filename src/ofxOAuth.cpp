@@ -808,14 +808,10 @@ std::string ofxOAuth::post(const std::string& uri, const std::string& query)
     ofLogVerbose("ofxOAuth::post") << "accessTokenSecret    >" << accessTokenSecret << "<";
     ofLogVerbose("ofxOAuth::post") << "-------------------";
     
-    // collect any parameters in our list that need to be placed in the request URI
-    char* p_req_url = oauth_serialize_url_sep(argc, 0, argv, const_cast<char *>("&"), 1);
+    // collect any parameters in our list that need to be placed as post params
+    char *post_params = oauth_serialize_url_sep(argc, 1, argv, const_cast<char *>("&"), 1);
     
-    if(0 != p_req_url)
-    {
-        req_url = p_req_url;
-        free(p_req_url);
-    }
+    req_url =  apiURL + uri;
 
     // collect any of the oauth parameters for inclusion in the HTTP Authorization header.
     char* p_req_hdr = oauth_serialize_url_sep(argc, 1, argv, const_cast<char *>(", "), 2); // const_cast<char *>() is to avoid Deprecated
@@ -851,7 +847,7 @@ std::string ofxOAuth::post(const std::string& uri, const std::string& query)
     ofLogVerbose("ofxOAuth::post") << "http    HEADER >" << http_hdr << "<";
     
     char* p_reply = ofx_oauth_curl_post(req_url.c_str(),   // the base url to get
-                                        "",              // the query string to send
+                                        post_params,              // the query string to send
                                         http_hdr.c_str()); // Authorization header is included here
     
     if(0 != p_reply)
