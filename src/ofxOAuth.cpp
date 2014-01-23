@@ -858,7 +858,7 @@ std::string ofxOAuth::post(const std::string& uri, const std::string& query)
     
     if (reply.empty())
     {
-        ofLogVerbose("ofxOAuth::post") << "HTTP get request failed.";
+        ofLogVerbose("ofxOAuth::post") << "HTTP post request failed.";
     }
     else
     {
