@@ -850,6 +850,11 @@ std::string ofxOAuth::post(const std::string& uri, const std::string& query)
                                         post_params,              // the query string to send
                                         http_hdr.c_str()); // Authorization header is included here
     
+    if(0 != post_params)
+    {
+        free(post_params);
+    }
+    
     if(0 != p_reply)
     {
         reply = p_reply;
