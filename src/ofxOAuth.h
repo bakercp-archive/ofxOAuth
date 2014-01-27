@@ -80,6 +80,7 @@ public:
     
     std::string postfile_multipartdata(const std::string& uri,
                      const std::string& queryParams = "",
+                     const std::string& filefieldname = "",
                      const std::string& filepath = "");
     
     // getters and setters

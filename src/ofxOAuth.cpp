@@ -311,13 +311,14 @@ char *ofx_oauth_curl_post_file (const char *u, const char *fn, size_t len, const
  *
  * @param u url to retrieve
  * @param p post parameters
- * @param cp post parameters
+ * @param pc post parameters count
+ * @param ffn name of the field that holds file data on the form
  * @param fn filename of the file to post along
  * @param len length of the file in bytes. set to '0' for autodetection
  * @param customheader specify custom HTTP header (or NULL for default)
  * @return returned HTTP or NULL on error
  */
-char *ofx_oauth_curl_post_file_multipartformdata(const char *u, const char *p, const int pc, const char *fn, size_t len, const char *customheader) {
+char *ofx_oauth_curl_post_file_multipartformdata(const char *u, const std::string q, const char *ffn, const char *fn, size_t len, const char *customheader) {
    
     CURL *curl;
     CURLcode res;
@@ -339,32 +340,41 @@ char *ofx_oauth_curl_post_file_multipartformdata(const char *u, const char *p, c
     struct curl_httppost* post = NULL;
     struct curl_httppost* last = NULL;
     struct curl_forms forms[2];
-    //char file1[] = fn;
     
+    // TODO: Maybe we can implement multiple file post here:
     forms[0].option = CURLFORM_FILE;
     forms[0].value = fn;
     forms[1].option = CURLFORM_END;
     
     /* Fill in the file upload field. This makes libcurl load data from
      the given file name when curl_easy_perform() is called. */
-    
-    // TODO : Add configurable file field name
-    
+
     curl_formadd(&post,
                   &last,
-                  CURLFORM_COPYNAME, "media[]",
+                  CURLFORM_COPYNAME, ffn,
                   CURLFORM_ARRAY, forms,
                   CURLFORM_END);
     
     /* Fill in other fields */
-    for (int i=0;i<pc; i++) {
-        // TODO : Add parameters passed by te function
+
+    char * cstr = new char [q.length()+1];
+    std::strcpy (cstr, q.c_str());
+    char * p = std::strtok (cstr,"&");
+    while (p!=0)
+    {
+        string line(p);
+        unsigned int pos = line.find("=");
+        string arr[2];
+        arr[0] = line.substr(0,pos);
+        arr[1] = line.substr(pos+1,line.length());
         curl_formadd(&post,
-                     &last,
-                     CURLFORM_COPYNAME, "status",
-                     CURLFORM_COPYCONTENTS, "test",
+                    &last,
+                     CURLFORM_COPYNAME, arr[0].c_str(),
+                     CURLFORM_COPYCONTENTS, arr[1].c_str(),
                      CURLFORM_END);
+        p = strtok(NULL," ");
     }
+    delete[] cstr;
     
     curl = curl_easy_init();
     if(!curl) return NULL;
@@ -942,6 +952,11 @@ std::string ofxOAuth::post(const std::string& uri, const std::string& query)
                                         post_params,       // the query string to send
                                         http_hdr.c_str()); // Authorization header is included here
     
+    if(0 != post_params)
+    {
+        free(post_params);
+    }
+    
     if(0 != p_reply)
     {
         reply = p_reply;
@@ -962,7 +977,7 @@ std::string ofxOAuth::post(const std::string& uri, const std::string& query)
 }
 
 //------------------------------------------------------------------------------
-std::string ofxOAuth::postfile_multipartdata(const std::string& uri, const std::string& query, const std::string& filepath)
+std::string ofxOAuth::postfile_multipartdata(const std::string& uri, const std::string& query, const std::string& filefieldname, const std::string& filepath)
 {
  
     std::string result = "";
@@ -1037,15 +1052,6 @@ std::string ofxOAuth::postfile_multipartdata(const std::string& uri, const std::
     ofLogVerbose("ofxOAuth::postfile_multipartdata") << "accessTokenSecret    >" << accessTokenSecret << "<";
     ofLogVerbose("ofxOAuth::postfile_multipartdata") << "-------------------";
     
-    // TODO: Do this propertly
-    // collect post parameters from the query
-    int  argcp   = 0;
-    char **argvp = 0;
-    
-    argcp = oauth_split_url_parameters(query.c_str(), &argvp);
-    // collect any parameters in our list that need to be placed as post params
-    char *post_params = oauth_serialize_url_sep(argcp, 1, argvp, const_cast<char *>("&"), 1);
-    
     req_url =  apiURL + uri;
     
     // collect any of the oauth parameters for inclusion in the HTTP Authorization header.
@@ -1063,7 +1069,7 @@ std::string ofxOAuth::postfile_multipartdata(const std::string& uri, const std::
     
     // free our parameter arrays that were allocated during parsing above
     oauth_free_array(&argc, &argv);
-    oauth_free_array(&argcp, &argvp);
+    //oauth_free_array(&argcp, &argvp);
     
     // construct the Authorization header.  Include realm information if available.
     if(!realm.empty())
@@ -1084,23 +1090,18 @@ std::string ofxOAuth::postfile_multipartdata(const std::string& uri, const std::
     
     char* p_reply = ofx_oauth_curl_post_file_multipartformdata(
                                         req_url.c_str(),   // the base url to get
-                                        post_params,       // the query string to send
-                                        argcp, // total number of parameters
+                                        query,       // string containing additional params to send (separated by &)
+                                        filefieldname.c_str(), // the name of the field that will hold filedata on the form
                                         filepath.c_str(), // Absolute path of the file you want to send
                                         0,              // length of the file in bytes. set to '0' for autodetection
                                         http_hdr.c_str()); // Authorization header is included here
-    
-    if(0 != post_params)
-    {
-        free(post_params);
-    }
     
     if(0 != p_reply)
     {
         reply = p_reply;
         free(p_reply);
     }
-    
+     
     if (reply.empty())
     {
         ofLogVerbose("ofxOAuth::postfile_multipartdata") << "HTTP post request failed.";
