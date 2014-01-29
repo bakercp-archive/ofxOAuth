@@ -5,48 +5,36 @@
 	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
 	<false/>
 	<key>IDESourceControlProjectIdentifier</key>
-	<string>CE6DFA1D-940F-4913-8C05-67E7D6AE3D8E</string>
+	<string>260562F1-D14D-4398-8005-D17087D1F14F</string>
 	<key>IDESourceControlProjectName</key>
 	<string>example-twitter</string>
 	<key>IDESourceControlProjectOriginsDictionary</key>
 	<dict>
-		<key>23ECA901-D907-404F-9544-3EF259F16767</key>
-		<string>ssh://github.com/bakercp/ofxOAuth.git</string>
-		<key>45B414AD-06FD-4497-9C7A-E1A33FADFECF</key>
-		<string>ssh://github.com/bakercp/openFrameworks.git</string>
+		<key>12E80BE3-8F05-40D1-93AF-3F0053EABA1E</key>
+		<string>https://github.com/pelayomendez/ofxOAuth.git</string>
 	</dict>
 	<key>IDESourceControlProjectPath</key>
-	<string>addons/ofxOAuth/example-twitter/example-twitter.xcodeproj/project.xcworkspace</string>
+	<string>example-twitter/example-twitter.xcodeproj/project.xcworkspace</string>
 	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
 	<dict>
-		<key>23ECA901-D907-404F-9544-3EF259F16767</key>
+		<key>12E80BE3-8F05-40D1-93AF-3F0053EABA1E</key>
 		<string>../../..</string>
-		<key>45B414AD-06FD-4497-9C7A-E1A33FADFECF</key>
-		<string>../../../../..</string>
 	</dict>
 	<key>IDESourceControlProjectURL</key>
-	<string>ssh://github.com/bakercp/ofxOAuth.git</string>
+	<string>https://github.com/pelayomendez/ofxOAuth.git</string>
 	<key>IDESourceControlProjectVersion</key>
 	<integer>110</integer>
 	<key>IDESourceControlProjectWCCIdentifier</key>
-	<string>45B414AD-06FD-4497-9C7A-E1A33FADFECF</string>
+	<string>12E80BE3-8F05-40D1-93AF-3F0053EABA1E</string>
 	<key>IDESourceControlProjectWCConfigurations</key>
 	<array>
 		<dict>
 			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
 			<string>public.vcs.git</string>
 			<key>IDESourceControlWCCIdentifierKey</key>
-			<string>23ECA901-D907-404F-9544-3EF259F16767</string>
+			<string>12E80BE3-8F05-40D1-93AF-3F0053EABA1E</string>
 			<key>IDESourceControlWCCName</key>
-			<string>ofxOAuth</string>
-		</dict>
-		<dict>
-			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
-			<string>public.vcs.git</string>
-			<key>IDESourceControlWCCIdentifierKey</key>
-			<string>45B414AD-06FD-4497-9C7A-E1A33FADFECF</string>
-			<key>IDESourceControlWCCName</key>
-			<string>openFrameworks</string>
+			<string>ofxOauth</string>
 		</dict>
 	</array>
 </dict>

@@ -60,7 +60,12 @@ void ofApp::keyPressed(int key)
      {
         if(client.isAuthorized())
         {
+            // Get tweets.
             std::string s = client.exampleMethod();
+            // Post new status
+            //std::string s = client.exampleUpdateStatusMethod("Hi from OF!");
+            // Post status & image
+            //std::string s = client.exampleUpdateStatusWithPhotoMethod("Hi from OF!", "buses.jpg");
             ofLogNotice("testApp::keyPressed") << s;
         }
         else
@@ -68,4 +73,6 @@ void ofApp::keyPressed(int key)
             ofLogWarning("testApp::keyPressed") << "Not authorized yet.";
         }
     }
+    
+    
 }
