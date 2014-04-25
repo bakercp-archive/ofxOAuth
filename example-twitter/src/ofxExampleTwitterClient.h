@@ -54,5 +54,16 @@ public:
     {
         return get("/1.1/search/tweets.json?q=openFrameworks");
     }
+    
+    // This method is an example of posting an status to twitter.
+    std::string exampleUpdateStatusMethod(string msg)
+    {
+        return post("/1.1/statuses/update.json","status="+msg);
+    }
+    
+    std::string exampleUpdateStatusWithPhotoMethod(string msg, string imgpath)
+    {
+        return postfile_multipartdata("/1.1/statuses/update_with_media.json","status="+msg,"media[]",imgpath);
+    }
 
 };

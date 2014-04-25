@@ -304,6 +304,108 @@ char *ofx_oauth_curl_post_file (const char *u, const char *fn, size_t len, const
     return (chunk.data);
 }
 
+
+/**
+ * cURL http post raw raw data from file with multipartformdata
+ * the returned string needs to be freed by the caller
+ *
+ * @param u url to retrieve
+ * @param p post parameters
+ * @param pc post parameters count
+ * @param ffn name of the field that holds file data on the form
+ * @param fn filename of the file to post along
+ * @param len length of the file in bytes. set to '0' for autodetection
+ * @param customheader specify custom HTTP header (or NULL for default)
+ * @return returned HTTP or NULL on error
+ */
+char *ofx_oauth_curl_post_file_multipartformdata(const char *u, const std::string q, const char *ffn, const char *fn, size_t len, const char *customheader) {
+   
+    CURL *curl;
+    CURLcode res;
+    struct curl_slist *slist=NULL;
+    struct MemoryStruct chunk;
+    
+    chunk.data=NULL;
+    chunk.size=0;
+    
+    if (customheader)
+        slist = curl_slist_append(slist, customheader);
+    
+    if (!len) {
+        struct stat statbuf;
+        if (stat(fn, &statbuf) == -1) return(NULL);
+        len = statbuf.st_size;
+    }
+    
+    struct curl_httppost* post = NULL;
+    struct curl_httppost* last = NULL;
+    struct curl_forms forms[2];
+    
+    // TODO: Maybe we can implement multiple file post here:
+    forms[0].option = CURLFORM_FILE;
+    forms[0].value = fn;
+    forms[1].option = CURLFORM_END;
+    
+    /* Fill in the file upload field. This makes libcurl load data from
+     the given file name when curl_easy_perform() is called. */
+
+    curl_formadd(&post,
+                  &last,
+                  CURLFORM_COPYNAME, ffn,
+                  CURLFORM_ARRAY, forms,
+                  CURLFORM_END);
+    
+    /* Fill in other fields */
+
+    char * cstr = new char [q.length()+1];
+    std::strcpy (cstr, q.c_str());
+    char * p = std::strtok (cstr,"&");
+    while (p!=0)
+    {
+        string line(p);
+        unsigned int pos = line.find("=");
+        string arr[2];
+        arr[0] = line.substr(0,pos);
+        arr[1] = line.substr(pos+1,line.length());
+        curl_formadd(&post,
+                    &last,
+                     CURLFORM_COPYNAME, arr[0].c_str(),
+                     CURLFORM_COPYCONTENTS, arr[1].c_str(),
+                     CURLFORM_END);
+        p = strtok(NULL," ");
+    }
+    delete[] cstr;
+    
+    curl = curl_easy_init();
+    if(!curl) return NULL;
+    
+    curl_easy_setopt(curl, CURLOPT_URL, u);
+    curl_easy_setopt(curl, CURLOPT_HTTPPOST, post);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, len);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+    // Debug info:
+    //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+    //curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+#ifdef OAUTH_CURL_TIMEOUT
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+#endif
+    GLOBAL_CURL_ENVIROMENT_OPTIONS;
+    res = curl_easy_perform(curl);
+    curl_slist_free_all(slist);
+    if (res) {
+        // error
+        return NULL;
+    }
+    
+    curl_easy_cleanup(curl);
+    return (chunk.data);
+    
+}
+
 /**
  * http send raw data, with callback.
  * the returned string needs to be freed by the caller
@@ -735,10 +837,283 @@ std::string ofxOAuth::get(const std::string& uri, const std::string& query)
 //------------------------------------------------------------------------------
 std::string ofxOAuth::post(const std::string& uri, const std::string& query)
 {
+    
     std::string result = "";
-    // TODO: well, this whole method ...
-    ofLogWarning("ofxOAuth::post") << "This method is not implemented, returning empty string.";
+    
+    if(apiURL.empty())
+    {
+        ofLogError("ofxOAuth::post") << "No api URL specified.";
+        return result;
+    }
+    
+    if(consumerKey.empty())
+    {
+        ofLogError("ofxOAuth::post") << "No consumer key specified.";
+        return result;
+    }
+    
+    if(consumerSecret.empty())
+    {
+        ofLogError("ofxOAuth::post") << "No consumer secret specified.";
+        return result;
+    }
+    
+    if(accessToken.empty())
+    {
+        ofLogError("ofxOAuth::post") << "No access token specified.";
+        return result;
+    }
+    
+    if(accessTokenSecret.empty())
+    {
+        ofLogError("ofxOAuth::post") << "No access token secret specified.";
+        return result;
+    }
+    
+    std::string req_url;
+    std::string req_hdr;
+    std::string http_hdr;
+    
+    std::string reply;
+    
+    // oauth_sign_url2 (see oauth.h) in steps
+    int  argc   = 0;
+    char **argv = 0;
+    
+    // break apart the url parameters to they can be signed below
+    // if desired we can also pass in additional patermeters (like oath* params)
+    // here.  For instance, if ?oauth_callback=XXX is defined in this url,
+    // it will be parsed and used in the Authorization header.
+    
+    std::string url = apiURL + uri + "?" + query;
+    
+    argc = oauth_split_url_parameters(url.c_str(), &argv);
+    
+    // sign the array.
+    oauth_sign_array2_process(&argc,
+                              &argv,
+                              0, //< postargs (unused)
+                              _getOAuthMethod(), // hash type, OA_HMAC, OA_RSA, OA_PLAINTEXT
+                              "POST", //< HTTP method (defaults to "GET")
+                              consumerKey.c_str(), //< consumer key - posted plain text
+                              consumerSecret.c_str(), //< consumer secret - used as 1st part of secret-key
+                              accessToken.c_str(),  //< token key - posted plain text in URL
+                              accessTokenSecret.c_str()); //< token secret - used as 2st part of secret-key
+    
+    ofLogVerbose("ofxOAuth::post") << "-------------------";
+    ofLogVerbose("ofxOAuth::post") << "consumerKey          >" << consumerKey << "<";
+    ofLogVerbose("ofxOAuth::post") << "consumerSecret       >" << consumerSecret << "<";
+    ofLogVerbose("ofxOAuth::post") << "requestToken         >" << requestToken << "<";
+    ofLogVerbose("ofxOAuth::post") << "requestTokenVerifier >" << requestTokenVerifier << "<";
+    ofLogVerbose("ofxOAuth::post") << "requestTokenSecret   >" << requestTokenSecret << "<";
+    ofLogVerbose("ofxOAuth::post") << "accessToken          >" << accessToken << "<";
+    ofLogVerbose("ofxOAuth::post") << "accessTokenSecret    >" << accessTokenSecret << "<";
+    ofLogVerbose("ofxOAuth::post") << "-------------------";
+    
+    // collect any parameters in our list that need to be placed as post params
+    char *post_params = oauth_serialize_url_sep(argc, 1, argv, const_cast<char *>("&"), 1);
+    
+    req_url =  apiURL + uri;
+
+    // collect any of the oauth parameters for inclusion in the HTTP Authorization header.
+    char* p_req_hdr = oauth_serialize_url_sep(argc, 1, argv, const_cast<char *>(", "), 2); // const_cast<char *>() is to avoid Deprecated
+    
+    if(0 != p_req_hdr)
+    {
+        req_hdr = p_req_hdr;
+        free(p_req_hdr);
+    }
+    
+    // look at url parameters to be signed if you want.
+    if(ofGetLogLevel() <= OF_LOG_VERBOSE)
+        for (int i=0;i<argc; i++) ofLogVerbose("ofxOAuth::post") << " : " << i << ":" << argv[i];
+    
+    // free our parameter arrays that were allocated during parsing above
+    oauth_free_array(&argc, &argv);
+    
+    // construct the Authorization header.  Include realm information if available.
+    if(!realm.empty())
+    {
+        // Note that (optional) 'realm' is not to be
+        // included in the oauth signed parameters and thus only added here.
+        // see 9.1.1 in http://oauth.net/core/1.0/#anchor14
+        http_hdr = "Authorization: OAuth realm=\"" + realm + "\", " + req_hdr;
+    }
+    else
+    {
+        http_hdr = "Authorization: OAuth " + req_hdr;
+    }
+    
+    ofLogVerbose("ofxOAuth::post") << "request URL    >" << req_url << "<";
+    ofLogVerbose("ofxOAuth::post") << "request HEADER >" << req_hdr << "<";
+    ofLogVerbose("ofxOAuth::post") << "http    HEADER >" << http_hdr << "<";
+    
+    char* p_reply = ofx_oauth_curl_post(req_url.c_str(),   // the base url to get
+                                        post_params,       // the query string to send
+                                        http_hdr.c_str()); // Authorization header is included here
+    
+    if(0 != post_params)
+    {
+        free(post_params);
+    }
+    
+    if(0 != p_reply)
+    {
+        reply = p_reply;
+        free(p_reply);
+    }
+    
+    if (reply.empty())
+    {
+        ofLogVerbose("ofxOAuth::post") << "HTTP post request failed.";
+    }
+    else
+    {
+        ofLogVerbose("ofxOAuth::post") << "HTTP-Reply: " << reply;
+        result = reply;
+    }
+    
     return result;
+}
+
+//------------------------------------------------------------------------------
+std::string ofxOAuth::postfile_multipartdata(const std::string& uri, const std::string& query, const std::string& filefieldname, const std::string& filepath)
+{
+ 
+    std::string result = "";
+    
+    if(apiURL.empty())
+    {
+        ofLogError("ofxOAuth::postfile_multipartdata") << "No api URL specified.";
+        return result;
+    }
+    
+    if(consumerKey.empty())
+    {
+        ofLogError("ofxOAuth::postfile_multipartdata") << "No consumer key specified.";
+        return result;
+    }
+    
+    if(consumerSecret.empty())
+    {
+        ofLogError("ofxOAuth::postfile_multipartdata") << "No consumer secret specified.";
+        return result;
+    }
+    
+    if(accessToken.empty())
+    {
+        ofLogError("ofxOAuth::postfile_multipartdata") << "No access token specified.";
+        return result;
+    }
+    
+    if(accessTokenSecret.empty())
+    {
+        ofLogError("ofxOAuth::postfile_multipartdata") << "No access token secret specified.";
+        return result;
+    }
+    
+    std::string req_url;
+    std::string req_hdr;
+    std::string http_hdr;
+    
+    std::string reply;
+    
+    // oauth_sign_url2 (see oauth.h) in steps
+    int  argc   = 0;
+    char **argv = 0;
+    
+    // break apart the url parameters to they can be signed below
+    // if desired we can also pass in additional patermeters (like oath* params)
+    // here.  For instance, if ?oauth_callback=XXX is defined in this url,
+    // it will be parsed and used in the Authorization header.
+    
+    std::string url = apiURL + uri;
+    
+    argc = oauth_split_url_parameters(url.c_str(), &argv);
+    
+    // sign the array.
+    oauth_sign_array2_process(&argc,
+                              &argv,
+                              0, //< postargs (unused)
+                              _getOAuthMethod(), // hash type, OA_HMAC, OA_RSA, OA_PLAINTEXT
+                              "POST", //< HTTP method (defaults to "GET")
+                              consumerKey.c_str(), //< consumer key - posted plain text
+                              consumerSecret.c_str(), //< consumer secret - used as 1st part of secret-key
+                              accessToken.c_str(),  //< token key - posted plain text in URL
+                              accessTokenSecret.c_str()); //< token secret - used as 2st part of secret-key
+    
+    ofLogVerbose("ofxOAuth::postfile_multipartdata") << "-------------------";
+    ofLogVerbose("ofxOAuth::postfile_multipartdata") << "consumerKey          >" << consumerKey << "<";
+    ofLogVerbose("ofxOAuth::postfile_multipartdata") << "consumerSecret       >" << consumerSecret << "<";
+    ofLogVerbose("ofxOAuth::postfile_multipartdata") << "requestToken         >" << requestToken << "<";
+    ofLogVerbose("ofxOAuth::postfile_multipartdata") << "requestTokenVerifier >" << requestTokenVerifier << "<";
+    ofLogVerbose("ofxOAuth::postfile_multipartdata") << "requestTokenSecret   >" << requestTokenSecret << "<";
+    ofLogVerbose("ofxOAuth::postfile_multipartdata") << "accessToken          >" << accessToken << "<";
+    ofLogVerbose("ofxOAuth::postfile_multipartdata") << "accessTokenSecret    >" << accessTokenSecret << "<";
+    ofLogVerbose("ofxOAuth::postfile_multipartdata") << "-------------------";
+    
+    req_url =  apiURL + uri;
+    
+    // collect any of the oauth parameters for inclusion in the HTTP Authorization header.
+    char* p_req_hdr = oauth_serialize_url_sep(argc, 1, argv, const_cast<char *>(", "), 2); // const_cast<char *>() is to avoid Deprecated
+    
+    if(0 != p_req_hdr)
+    {
+        req_hdr = p_req_hdr;
+        free(p_req_hdr);
+    }
+    
+    // look at url parameters to be signed if you want.
+    if(ofGetLogLevel() <= OF_LOG_VERBOSE)
+        for (int i=0;i<argc; i++) ofLogVerbose("ofxOAuth::postfile_multipartdata") << " : " << i << ":" << argv[i];
+    
+    // free our parameter arrays that were allocated during parsing above
+    oauth_free_array(&argc, &argv);
+    //oauth_free_array(&argcp, &argvp);
+    
+    // construct the Authorization header.  Include realm information if available.
+    if(!realm.empty())
+    {
+        // Note that (optional) 'realm' is not to be
+        // included in the oauth signed parameters and thus only added here.
+        // see 9.1.1 in http://oauth.net/core/1.0/#anchor14
+        http_hdr = "Authorization: OAuth realm=\"" + realm + "\", " + req_hdr;
+    }
+    else
+    {
+        http_hdr = "Authorization: OAuth " + req_hdr;
+    }
+    
+    ofLogVerbose("ofxOAuth::postfile_multipartdata") << "request URL    >" << req_url << "<";
+    ofLogVerbose("ofxOAuth::postfile_multipartdata") << "request HEADER >" << req_hdr << "<";
+    ofLogVerbose("ofxOAuth::postfile_multipartdata") << "http    HEADER >" << http_hdr << "<";
+    
+    char* p_reply = ofx_oauth_curl_post_file_multipartformdata(
+                                        req_url.c_str(),   // the base url to get
+                                        query,       // string containing additional params to send (separated by &)
+                                        filefieldname.c_str(), // the name of the field that will hold filedata on the form
+                                        filepath.c_str(), // Absolute path of the file you want to send
+                                        0,              // length of the file in bytes. set to '0' for autodetection
+                                        http_hdr.c_str()); // Authorization header is included here
+    
+    if(0 != p_reply)
+    {
+        reply = p_reply;
+        free(p_reply);
+    }
+     
+    if (reply.empty())
+    {
+        ofLogVerbose("ofxOAuth::postfile_multipartdata") << "HTTP post request failed.";
+    }
+    else
+    {
+        ofLogVerbose("ofxOAuth::postfile_multipartdata") << "HTTP-Reply: " << reply;
+        result = reply;
+    }
+    
+    return result;
+    
 }
 
 //------------------------------------------------------------------------------
