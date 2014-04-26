@@ -80,6 +80,11 @@ public:
     std::string post(const std::string& uri,
                      const std::string& queryParams = "");
     
+    std::string postfile_multipartdata(const std::string& uri,
+                     const std::string& queryParams = "",
+                     const std::string& filefieldname = "",
+                     const std::string& filepath = "");
+    
     // getters and setters
     std::string getApiURL();
     void setApiURL(const std::string& v, bool autoSetEndpoints = true);
