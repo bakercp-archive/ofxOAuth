@@ -57,6 +57,8 @@ public:
 
     virtual ~ofxOAuth();
 
+    void setup();
+
     void setup(const std::string& apiURL,
                const std::string& consumerKey,
                const std::string& consumerSecret);

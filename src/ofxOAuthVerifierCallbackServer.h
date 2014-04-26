@@ -42,7 +42,7 @@
 #include "ofxOAuthVerifierCallbackInterface.h"
 
 
-//------------------------------------------------------------------------------
+
 class ofxOAuthAuthReqHandler: public Poco::Net::HTTPRequestHandler
 {
 public:
@@ -284,7 +284,7 @@ protected:
     
 };
 
-//------------------------------------------------------------------------------
+
 class ofxOAuthAuthReqHandlerFactory: public Poco::Net::HTTPRequestHandlerFactory
 {
 public:
@@ -307,17 +307,17 @@ protected:
 
 };
 
-//------------------------------------------------------------------------------
+
 class ofxOAuthVerifierCallbackServer: public ofThread
 {
 public:
-    ofxOAuthVerifierCallbackServer(ofxOAuthVerifierCallbackInterface* _callback, 
-                                   const string& _docRoot = "", 
-                                   int _port = -1):
-        callback(_callback),
-        docRoot(_docRoot)
+    ofxOAuthVerifierCallbackServer(ofxOAuthVerifierCallbackInterface* callback,
+                                   const string& docRoot = "",
+                                   int port = -1):
+        _callback(callback),
+        _docRoot(docRoot)
     {
-        port = _port <= 0 ? (int)ofRandom(8000,9000) : _port;
+        _port = port <= 0 ? (int)ofRandom(8000, 9000) : port;
     }
    
     virtual ~ofxOAuthVerifierCallbackServer()
@@ -329,7 +329,7 @@ public:
 
     void start()
     {
-        startThread(true, false);
+        startThread(true);
     }
 
     void stop()
@@ -340,51 +340,59 @@ public:
     void threadedFunction()
     {
         ofLogVerbose("ofxOAuthVerifierCallbackServer::~ofxOAuthVerifierCallbackServer") << "Server starting @ " << getURL();
-        Poco::Net::ServerSocket socket(port);
+
+        Poco::Net::ServerSocket socket(_port);
         // all of these params are an attempt to make the server shut down VERY quickly.
         Poco::Net::HTTPServerParams* pParams = new Poco::Net::HTTPServerParams();
+
         pParams->setMaxQueued(1);
         pParams->setMaxThreads(1);
         pParams->setKeepAlive(false);
         pParams->setMaxKeepAliveRequests(0);
         pParams->setKeepAliveTimeout(1);
         pParams->setServerName("ofxOAuthVerifierCallbackServer/1.0");
+
         Poco::ThreadPool babyPool(1,1,1,1);
-        Poco::Net::HTTPServer server(new ofxOAuthAuthReqHandlerFactory(callback, docRoot),
+        Poco::Net::HTTPServer server(new ofxOAuthAuthReqHandlerFactory(_callback, _docRoot),
                                      babyPool,
                                      socket,
                                      new Poco::Net::HTTPServerParams());
+
         server.start(); // start the http server
         ofLogVerbose("ofxOAuthVerifierCallbackServer::~ofxOAuthVerifierCallbackServer") << "Server successfully started @ " + getURL();
+
         while( isThreadRunning() != 0 ) sleep(250);
+
         server.stop(); // stop the http server
         socket.close();
         babyPool.joinAll();
+
         ofLogVerbose("ofxOAuthVerifierCallbackServer::~ofxOAuthVerifierCallbackServer") << "Server successfully shut down.";
     }
 
-    std::string getURL()
+    std::string getURL() const
     {
-        return "http://127.0.0.1:" + ofToString(port) + "/";
+        return "http://127.0.0.1:" + ofToString(_port) + "/";
     }
 
-    int getPort()
+    int getPort() const
     {
-        return port;
+        return _port;
     }
 
-    void setPort(int _port)
+    void setPort(int port)
     {
-        port = _port;
+        _port = port;
     }
 
-    void setDocRoot(const std::string& _docRoot)
+    void setDocRoot(const std::string& docRoot)
     {
-        docRoot = _docRoot;
+        _docRoot = docRoot;
     }
     
 protected:
-    ofxOAuthVerifierCallbackInterface* callback;
-    int port;
-    string docRoot;
+    ofxOAuthVerifierCallbackInterface* _callback;
+    int _port;
+    std::string _docRoot;
+
 };

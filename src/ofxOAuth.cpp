@@ -59,50 +59,62 @@ curl_easy_setopt(curl, CURLOPT_FAILONERROR, (long) atol(getenv("CURLOPT_FAILONER
 cout << "CURLOPT_FAILONERROR: " << getenv("CURLOPT_FAILONERROR") << endl; \
 }
 
-struct MemoryStruct {
-    char *data;
-    size_t size; //< bytes remaining (r), bytes accumulated (w)
-
-    size_t start_size; //< only used with ..AndCall()
-    void (*callback)(void*,int,size_t,size_t); //< only used with ..AndCall()
-    void *callback_data; //< only used with ..AndCall()
+struct MemoryStruct
+{
+    char* data;
+    std::size_t size; //< bytes remaining (r), bytes accumulated (w)
+    std::size_t start_size; //< only used with ..AndCall()
+    void (*callback)(void*,
+                     int,
+                     std::size_t,
+                     std::size_t); //< only used with ..AndCall()
+    void* callback_data; //< only used with ..AndCall()
 };
 
-static size_t
-WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data) {
-    cout << "IN MEMORY CALLBACK" << endl;
-    cout << "ptr: " << ptr << endl;
-    cout << "size: " << size << endl;
-    cout << "nmemb: " << nmemb << endl;
-    cout << "data: " << data << endl;
+static std::size_t WriteMemoryCallback(void* ptr,
+                                       std::size_t size,
+                                       std::size_t nmemb,
+                                       void* data)
+{
+    std::stringstream ss;
+    ss << "IN MEMORY CALLBACK" << endl;
+    ss << "ptr: " << ptr << endl;
+    ss << "size: " << size << endl;
+    ss << "nmemb: " << nmemb << endl;
+    ss << "data: " << data << endl;
 
+    std::size_t realsize = size * nmemb;
 
-    size_t realsize = size * nmemb;
     struct MemoryStruct *mem = (struct MemoryStruct *)data;
 
-    mem->data = (char *)realloc(mem->data, mem->size + realsize + 1);
-    if (mem->data) {
+    mem->data = (char*)realloc(mem->data, mem->size + realsize + 1);
+
+    if (mem->data)
+    {
         memcpy(&(mem->data[mem->size]), ptr, realsize);
         mem->size += realsize;
         mem->data[mem->size] = 0;
     }
 
-    cout << "----" << endl;
-    cout << "ptr: " << ptr << endl;
-    cout << "size: " << size << endl;
-    cout << "nmemb: " << nmemb << endl;
-    cout << "data: " << data << endl;
-    cout << "realsize: " << realsize << endl;
+    ss << "----" << endl;
+    ss << "ptr: " << ptr << endl;
+    ss << "size: " << size << endl;
+    ss << "nmemb: " << nmemb << endl;
+    ss << "data: " << data << endl;
+    ss << "realsize: " << realsize << endl;
 
-
+    ofLogVerbose("WriteMemoryCallback") << ss.str();
 
     return realsize;
 }
 
-static size_t
-ReadMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data) {
+static std::size_t ReadMemoryCallback(void*ptr,
+                                      std::size_t size,
+                                      std::size_t nmemb,
+                                      void*data)
+{
     struct MemoryStruct *mem = (struct MemoryStruct *)data;
-    size_t realsize = size * nmemb;
+    std::size_t realsize = size * nmemb;
     if (realsize > mem->size) realsize = mem->size;
     memcpy(ptr, mem->data, realsize);
     mem->size -= realsize;
@@ -110,19 +122,28 @@ ReadMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data) {
     return realsize;
 }
 
-static size_t
-WriteMemoryCallbackAndCall(void *ptr, size_t size, size_t nmemb, void *data) {
+static std::size_t WriteMemoryCallbackAndCall(void* ptr,
+                                              std::size_t size,
+                                              std::size_t nmemb,
+                                              void* data)
+{
     struct MemoryStruct *mem = (struct MemoryStruct *)data;
-    size_t ret=WriteMemoryCallback(ptr,size,nmemb,data);
-    mem->callback(mem->callback_data,0,mem->size,mem->size);
+    std::size_t ret=WriteMemoryCallback(ptr,size,nmemb,data);
+    mem->callback(mem->callback_data, 0, mem->size, mem->size);
     return ret;
 }
 
-static size_t
-ReadMemoryCallbackAndCall(void *ptr, size_t size, size_t nmemb, void *data) {
+static size_t ReadMemoryCallbackAndCall(void*ptr,
+                                        std::size_t size,
+                                        std::size_t nmemb,
+                                        void*data)
+{
     struct MemoryStruct *mem = (struct MemoryStruct *)data;
-    size_t ret=ReadMemoryCallback(ptr,size,nmemb,data);
-    mem->callback(mem->callback_data,1,mem->start_size-mem->size,mem->start_size);
+    std::size_t ret=ReadMemoryCallback(ptr,size,nmemb,data);
+    mem->callback(mem->callback_data,
+                  1,
+                  mem->start_size-mem->size,
+                  mem->start_size);
     return ret;
 }
 
@@ -148,7 +169,7 @@ char *ofx_oauth_curl_post (const char *u, const char *p, const char *customheade
     if(!curl) return NULL;
     curl_easy_setopt(curl, CURLOPT_URL, u);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, p);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
     if (customheader) {
         slist = curl_slist_append(slist, customheader);
@@ -206,7 +227,7 @@ char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader
     cout << "URL TO CHECK " << (q ? t1:u) << endl;
 
     curl_easy_setopt(curl, CURLOPT_URL, q ? t1:u);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
     if (customheader) 
     {
@@ -284,7 +305,7 @@ char *ofx_oauth_curl_post_file (const char *u, const char *fn, size_t len, const
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, len);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
     curl_easy_setopt(curl, CURLOPT_READDATA, f);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
 #ifdef OAUTH_CURL_TIMEOUT
@@ -384,7 +405,7 @@ char *ofx_oauth_curl_post_file_multipartformdata(const char *u, const std::strin
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, len);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
     // Debug info:
     //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -420,7 +441,7 @@ char *ofx_oauth_curl_post_file_multipartformdata(const char *u, const std::strin
  * @param callback_data specify data to pass to the callback function
  * @return returned HTTP reply or NULL on error
  */
-char *ofx_oauth_curl_send_data_with_callback (const char *u, const char *data, size_t len, const char *customheader, void (*callback)(void*,int,size_t,size_t), void *callback_data, const char *httpMethod) {
+char *ofx_oauth_curl_send_data_with_callback (const char *u, const char *data, size_t len, const char *customheader, void (*callback)(void*,int,size_t,size_t), void*callback_data, const char *httpMethod) {
     CURL *curl;
     CURLcode res;
     struct curl_slist *slist=NULL;
@@ -450,12 +471,12 @@ char *ofx_oauth_curl_send_data_with_callback (const char *u, const char *data, s
     if (httpMethod) curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, httpMethod);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, len);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-    curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&rdnfo);
+    curl_easy_setopt(curl, CURLOPT_READDATA, (void*)&rdnfo);
     if (callback)
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, ReadMemoryCallbackAndCall);
     else
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, ReadMemoryCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
     if (callback)
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallbackAndCall);
     else
@@ -497,7 +518,7 @@ char *ofx_oauth_curl_send_data (const char *u, const char *data, size_t len, con
     return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, NULL, NULL, httpMethod);
 }
 
-char *ofx_oauth_curl_post_data_with_callback (const char *u, const char *data, size_t len, const char *customheader, void (*callback)(void*,int,size_t,size_t), void *callback_data) {
+char *ofx_oauth_curl_post_data_with_callback (const char *u, const char *data, size_t len, const char *customheader, void (*callback)(void*,int,size_t,size_t), void*callback_data) {
     return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, callback, callback_data, NULL);
 }
 
@@ -526,13 +547,14 @@ char *ofx_oauth_http_get2 (const char *u, const char *q, const char *customheade
 #endif // libcURL.
 
 
-//------------------------------------------------------------------------------
+
 ofxOAuth::ofxOAuth(): ofxOAuthVerifierCallbackInterface()
 {
     oauthMethod = OFX_OA_HMAC;  // default
     httpMethod  = OFX_HTTP_GET; // default
 
     const char* v = getenv("CURLOPT_CAINFO");
+    
     if(0 != v) _old_curlopt_cainfo = v;
     
     // this Certificate Authority bundle is extracted 
@@ -567,7 +589,7 @@ ofxOAuth::ofxOAuth(): ofxOAuthVerifierCallbackInterface()
     ofAddListener(ofEvents().update,this,&ofxOAuth::update);
 }
 
-//------------------------------------------------------------------------------
+
 ofxOAuth::~ofxOAuth()
 {
     // be nice and set it back, if there was 
@@ -584,7 +606,13 @@ ofxOAuth::~ofxOAuth()
     ofRemoveListener(ofEvents().update,this,&ofxOAuth::update);
 }
 
-//------------------------------------------------------------------------------
+
+void ofxOAuth::setup()
+{
+    loadCredentials();
+}
+
+
 void ofxOAuth::setup(const std::string& _apiURL,
                      const std::string& _requestTokenUrl,
                      const std::string& _accessTokenUrl,
@@ -603,7 +631,6 @@ void ofxOAuth::setup(const std::string& _apiURL,
 }
 
 
-//------------------------------------------------------------------------------
 void ofxOAuth::setup(const std::string& _apiURL,
                      const std::string& _consumerKey,
                      const std::string& _consumerSecret)
@@ -615,7 +642,7 @@ void ofxOAuth::setup(const std::string& _apiURL,
     loadCredentials();
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::update(ofEventArgs& args)
 {
     if(accessFailed)
@@ -694,7 +721,7 @@ void ofxOAuth::update(ofEventArgs& args)
     }
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::get(const std::string& uri, const std::string& query)
 {
     std::string result = "";
@@ -834,7 +861,7 @@ std::string ofxOAuth::get(const std::string& uri, const std::string& query)
     return result;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::post(const std::string& uri, const std::string& query)
 {
     
@@ -976,7 +1003,7 @@ std::string ofxOAuth::post(const std::string& uri, const std::string& query)
     return result;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::postfile_multipartdata(const std::string& uri, const std::string& query, const std::string& filefieldname, const std::string& filepath)
 {
  
@@ -1116,7 +1143,7 @@ std::string ofxOAuth::postfile_multipartdata(const std::string& uri, const std::
     
 }
 
-//------------------------------------------------------------------------------
+
 std::map<std::string, std::string> ofxOAuth::obtainRequestToken()
 {
     std::map<std::string, std::string> returnParams;
@@ -1326,7 +1353,7 @@ std::map<std::string, std::string> ofxOAuth::obtainRequestToken()
     return returnParams;
 }
 
-//------------------------------------------------------------------------------
+
 std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
 {
     std::map<std::string,std::string> returnParams;
@@ -1541,7 +1568,7 @@ std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
     return returnParams;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::requestUserVerification(bool launchBrowser)
 {
     return requestUserVerification("",launchBrowser);
@@ -1569,13 +1596,13 @@ std::string ofxOAuth::requestUserVerification(std::string additionalAuthParams,
     return url;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getApiURL()
 {
     return apiURL;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setApiURL(const std::string &v, bool autoSetEndpoints)
 {
     apiURL = v; 
@@ -1587,152 +1614,152 @@ void ofxOAuth::setApiURL(const std::string &v, bool autoSetEndpoints)
     }
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getRequestTokenURL()
 {
     return requestTokenURL;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setRequestTokenURL(const std::string& v)
 {
     requestTokenURL = appendQuestionMark(v);
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getAccessTokenURL()
 {
     return accessTokenURL;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setAccessTokenURL(const std::string& v)
 {
     accessTokenURL = appendQuestionMark(v);
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getAuthorizationURL()
 {
     return authorizationURL;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setAuthorizationURL(const std::string& v)
 {
     authorizationURL = appendQuestionMark(v);
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getVerifierCallbackURL()
 {
     return verifierCallbackURL;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setVerifierCallbackURL(const std::string& v)
 {
     verifierCallbackURL = v;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setApplicationDisplayName(const std::string& v)
 {
     applicationDisplayName = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getApplicationDisplayName()
 {
     return applicationDisplayName;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setApplicationScope(const std::string& v)
 {
     // google specific
     applicationScope = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getApplicationScope()
 {
     return applicationScope;
 }
 
-//------------------------------------------------------------------------------
+
 bool ofxOAuth::isVerifierCallbackServerEnabled()
 {
     return enableVerifierCallbackServer;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setVerifierCallbackServerDocRoot(const std::string& v)
 {
     verifierCallbackServerDocRoot = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getVerifierCallbackServerDocRoot()
 {
     return verifierCallbackServerDocRoot;
 }
 
-//------------------------------------------------------------------------------
+
 bool ofxOAuth::isVerifierCallbackPortSet() const
 {
     return vertifierCallbackServerPort > 0;
 }
 
-//------------------------------------------------------------------------------
+
 int ofxOAuth::getVerifierCallbackServerPort() const
 {
     return vertifierCallbackServerPort;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setVerifierCallbackServerPort(int portNumber)
 {
     vertifierCallbackServerPort = portNumber;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setEnableVerifierCallbackServer(bool v)
 {
     enableVerifierCallbackServer = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getRequestToken()
 {
     return requestToken;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setRequestToken(const std::string& v)
 {
     requestToken = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getRequestTokenSecret()
 {
     return requestTokenSecret;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setRequestTokenSecret(const std::string& v)
 {
     requestTokenSecret = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getRequestTokenVerifier()
 {
     return requestTokenVerifier;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setRequestTokenVerifier(const std::string& _requestToken,
                                        const std::string& _requestTokenVerifier)
 {
@@ -1746,128 +1773,128 @@ void ofxOAuth::setRequestTokenVerifier(const std::string& _requestToken,
     }
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setRequestTokenVerifier(const std::string& v)
 {
     requestTokenVerifier = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getAccessToken()
 {
     return accessToken;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setAccessToken(const std::string& v)
 {
     accessToken = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getAccessTokenSecret()
 {
     return accessTokenSecret;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setAccessTokenSecret(const std::string& v)
 {
     accessTokenSecret = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getEncodedUserId()
 {
     return encodedUserId;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setEncodedUserId(const std::string& v)
 {
     encodedUserId = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getUserId()
 {
     return userId;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setUserId(const std::string& v)
 {
     userId = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getEncodedUserPassword()
 {
     return encodedUserPassword;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setEncodedUserPassword(const std::string& v)
 {
     encodedUserPassword = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getUserPassword()
 {
     return userPassword;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setUserPassword(const std::string& v)
 {
     userPassword = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getConsumerKey()
 {
     return consumerKey;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setConsumerKey(const std::string& v)
 {
     consumerKey = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getConsumerSecret()
 {
     return consumerSecret;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setConsumerSecret(const std::string& v)
 {
     consumerSecret = v;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setApiName(const std::string& v)
 {
     apiName = v;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getApiName()
 {
     return apiName;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::receivedVerifierCallbackRequest(const Poco::Net::HTTPServerRequest& request)
 {
     ofLogVerbose("ofxOAuth::receivedVerifierCallbackRequest") << "Not implemented.";
     // does nothing with this, but subclasses might.
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::receivedVerifierCallbackHeaders(const Poco::Net::NameValueCollection& headers)
 {
     ofLogVerbose("ofxOAuth::receivedVerifierCallbackHeaders") << "Not implemented.";
@@ -1877,7 +1904,7 @@ void ofxOAuth::receivedVerifierCallbackHeaders(const Poco::Net::NameValueCollect
     // does nothing with this, but subclasses might.
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::receivedVerifierCallbackCookies(const Poco::Net::NameValueCollection& cookies)
 {
     for(Poco::Net::NameValueCollection::ConstIterator iter = cookies.begin();
@@ -1889,7 +1916,7 @@ void ofxOAuth::receivedVerifierCallbackCookies(const Poco::Net::NameValueCollect
     // does nothing with this, but subclasses might.
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::receivedVerifierCallbackGetParams(const Poco::Net::NameValueCollection& getParams)
 {
     for(Poco::Net::NameValueCollection::ConstIterator iter = getParams.begin();
@@ -1907,7 +1934,7 @@ void ofxOAuth::receivedVerifierCallbackGetParams(const Poco::Net::NameValueColle
     // subclasses might also want to extract other get parameters.    
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::receivedVerifierCallbackPostParams(const Poco::Net::NameValueCollection& postParams)
 {
     // come soon c++11!
@@ -1921,28 +1948,34 @@ void ofxOAuth::receivedVerifierCallbackPostParams(const Poco::Net::NameValueColl
     // does nothing with this, but subclasses might.
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getRealm()
 {
     return realm;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setRealm(const std::string& v)
 {
     realm = v;
 }
 
-//------------------------------------------------------------------------------
+
 bool ofxOAuth::isAuthorized()
 {
     return !accessToken.empty() && !accessTokenSecret.empty();
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::saveCredentials()
 {
     ofxXmlSettings XML;
+
+    XML.getValue("oauth:api_url", apiURL);
+    XML.getValue("oauth:api_request_token_url", requestTokenURL);
+    XML.getValue("oauth:api_access_token_url", accessTokenURL);
+    XML.getValue("oauth:api_authorization_url", authorizationURL);
+    XML.getValue("oauth:verifier_callback_url", verifierCallbackURL);
 
     XML.getValue("oauth:api_name", apiName);
 
@@ -1968,7 +2001,7 @@ void ofxOAuth::saveCredentials()
 
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::loadCredentials()
 {
     ofxXmlSettings XML;
@@ -2002,6 +2035,19 @@ void ofxOAuth::loadCredentials()
             return;
         }
 
+        std::string _apiURL = XML.getValue("oauth:api_url", "");
+
+        if (!_apiURL.empty())
+        {
+            setApiURL(_apiURL);
+        }
+
+//        XML.getValue("oauth:api_url", apiURL);
+//        XML.getValue("oauth:api_request_token_url", requestTokenURL);
+//        XML.getValue("oauth:api_access_token_url", accessTokenURL);
+//        XML.getValue("oauth:api_authorization_url", authorizationURL);
+//        XML.getValue("oauth:verifier_callback_url", verifierCallbackURL);
+
         apiName             = XML.getValue("oauth:api_name", "");
 
         accessToken         = XML.getValue("oauth:access_token", "");
@@ -2022,45 +2068,45 @@ void ofxOAuth::loadCredentials()
     
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setCredentialsPathname(const std::string& credentials)
 {
     credentialsPathname = credentials;
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::getCredentialsPathname()
 {
     return credentialsPathname;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::resetErrors()
 {
     accessFailed = false;
     accessFailedReported = false;
 }
 
-//------------------------------------------------------------------------------
+
 ofxOAuth::AuthMethod ofxOAuth::getOAuthMethod()
 {
     return oauthMethod;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setOAuthMethod(AuthMethod _oauthMethod)
 {
     oauthMethod = _oauthMethod;
 }
 
-//------------------------------------------------------------------------------
+
 void ofxOAuth::setSSLCACertificateFile(const std::string& pathname)
 {
     SSLCACertificateFile = pathname;
     setenv("CURLOPT_CAINFO", ofToDataPath(SSLCACertificateFile).c_str(), true);
 }
 
-//------------------------------------------------------------------------------
+
 OAuthMethod ofxOAuth::_getOAuthMethod()
 {
     switch (oauthMethod)
@@ -2077,7 +2123,7 @@ OAuthMethod ofxOAuth::_getOAuthMethod()
     }
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::_getHttpMethod()
 {
     switch (httpMethod)
@@ -2092,7 +2138,7 @@ std::string ofxOAuth::_getHttpMethod()
     }
 }
 
-//------------------------------------------------------------------------------
+
 std::string ofxOAuth::appendQuestionMark(const std::string& url) const
 {
     std::string u = url;
