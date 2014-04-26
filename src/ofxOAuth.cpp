@@ -584,15 +584,10 @@ ofxOAuth::ofxOAuth(): ofxOAuthVerifierCallbackInterface()
     oauthMethod = OFX_OA_HMAC;  // default
     httpMethod  = OFX_HTTP_GET; // default
 
-<<<<<<< HEAD
-    // const char* v = getenv("CURLOPT_CAINFO");
-    // if(0 != v) _old_curlopt_cainfo = v;
-=======
     const char* v = getenv("CURLOPT_CAINFO");
     
     if(0 != v) _old_curlopt_cainfo = v;
->>>>>>> master
-    
+
     // this Certificate Authority bundle is extracted 
     // from mozilla.org.pem, which can be found here
     //
@@ -647,21 +642,13 @@ ofxOAuth::~ofxOAuth()
     ofRemoveListener(ofEvents().update,this,&ofxOAuth::update);
 }
 
-<<<<<<< HEAD
-=======
 
->>>>>>> master
 void ofxOAuth::setup()
 {
     loadCredentials();
 }
 
-
-<<<<<<< HEAD
-
 //------------------------------------------------------------------------------
-=======
->>>>>>> master
 void ofxOAuth::setup(const std::string& _apiURL,
                      const std::string& _requestTokenUrl,
                      const std::string& _accessTokenUrl,
