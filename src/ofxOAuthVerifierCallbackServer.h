@@ -73,7 +73,9 @@ public:
         
         // send the cookies
         Poco::Net::NameValueCollection cookies;
+
         request.getCookies(cookies);
+
         if(!cookies.empty())
         {
             callback->receivedVerifierCallbackCookies(cookies);
