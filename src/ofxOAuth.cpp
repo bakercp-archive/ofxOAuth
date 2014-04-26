@@ -1884,7 +1884,7 @@ void ofxOAuth::setUserPassword(const std::string& v)
 }
 
 
-std::string ofxOAuth::getConsumerKey()
+std::string ofxOAuth::getConsumerKey() const
 {
     return consumerKey;
 }
@@ -1895,7 +1895,7 @@ void ofxOAuth::setConsumerKey(const std::string& v)
     consumerKey = v;
 }
 
-std::string ofxOAuth::getConsumerSecret()
+std::string ofxOAuth::getConsumerSecret() const
 {
     return consumerSecret;
 }
@@ -1913,7 +1913,7 @@ void ofxOAuth::setApiName(const std::string& v)
 }
 
 
-std::string ofxOAuth::getApiName()
+std::string ofxOAuth::getApiName() const
 {
     return apiName;
 }
@@ -1979,7 +1979,7 @@ void ofxOAuth::receivedVerifierCallbackPostParams(const Poco::Net::NameValueColl
 }
 
 
-std::string ofxOAuth::getRealm()
+std::string ofxOAuth::getRealm() const
 {
     return realm;
 }

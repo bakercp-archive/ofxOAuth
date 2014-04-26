@@ -154,12 +154,12 @@ public:
     void setConsumerSecret(const std::string& v);
     
     void setApiName(const std::string& v);
-    std::string getApiName();
+    std::string getApiName() const;
 
     std::map<std::string, std::string> getCustomInfo() const;
 
     // token verifier
-    std::string getRealm();
+    std::string getRealm() const;
     void setRealm(const std::string& v);
     
     
@@ -214,10 +214,17 @@ protected:
     std::string requestTokenSecret;   // initially acquired via obtainRequestToken()
     std::string requestTokenVerifier;      // acquired via web server callback or manual entry by user
 
-    // the following 
+    // the following
     std::string apiName;
     std::string accessToken;          // after requestToken, requestTokenSecret and requestVerifier,
     std::string accessTokenSecret;
+    std::string encodedUserId;
+
+    std::string screenName;
+    std::string userId;
+    std::string encodedUserPassword;
+    std::string userPassword;
+
 
     // for dta such as screenName, userId, encodedUserPassword, userPassword, etc.
     std::map<std::string, std::string> customInfo;
