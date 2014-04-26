@@ -148,16 +148,18 @@ public:
     void setUserPassword(const std::string& v);
     
     // request consumer token / secret
-    std::string getConsumerKey();
+    std::string getConsumerKey() const;
     void setConsumerKey(const std::string& v);
-    std::string getConsumerSecret();
+    std::string getConsumerSecret() const;
     void setConsumerSecret(const std::string& v);
     
     void setApiName(const std::string& v);
-    std::string getApiName();
+    std::string getApiName() const;
+
+    std::map<std::string, std::string> getCustomInfo() const;
 
     // token verifier
-    std::string getRealm();
+    std::string getRealm() const;
     void setRealm(const std::string& v);
     
     
@@ -177,8 +179,8 @@ protected:
     AuthMethod getOAuthMethod();
     void setOAuthMethod(AuthMethod v);
 
-    map<std::string,std::string> obtainRequestToken();
-    map<std::string,std::string> obtainAccessToken();
+    std::map<std::string,std::string> obtainRequestToken();
+    std::map<std::string,std::string> obtainAccessToken();
     
     std::string requestUserVerification(bool launchBrowser = true);
     std::string requestUserVerification(std::string additionalAuthParams,
@@ -212,7 +214,7 @@ protected:
     std::string requestTokenSecret;   // initially acquired via obtainRequestToken()
     std::string requestTokenVerifier;      // acquired via web server callback or manual entry by user
 
-    // the following 
+    // the following
     std::string apiName;
     std::string accessToken;          // after requestToken, requestTokenSecret and requestVerifier,
     std::string accessTokenSecret;
@@ -222,7 +224,11 @@ protected:
     std::string userId;
     std::string encodedUserPassword;
     std::string userPassword;
-    
+
+
+    // for dta such as screenName, userId, encodedUserPassword, userPassword, etc.
+    std::map<std::string, std::string> customInfo;
+
     // other stuff
     
     std::string realm;

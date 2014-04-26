@@ -157,13 +157,13 @@ static size_t ReadMemoryCallbackAndCall(void*ptr,
  * @return returned HTTP
  */
 char *ofx_oauth_curl_post (const char *u, const char *p, const char *customheader) {
-    CURL *curl;
-    CURLcode res;
-    struct curl_slist *slist=NULL;
+     CURL *curl;
+     CURLcode res;
+     struct curl_slist *slist=NULL;
 
-    struct MemoryStruct chunk;
-    chunk.data=NULL;
-    chunk.size = 0;
+     struct MemoryStruct chunk;
+     chunk.data=NULL;
+     chunk.size = 0;
 
     curl = curl_easy_init();
     if(!curl) return NULL;
@@ -187,8 +187,8 @@ char *ofx_oauth_curl_post (const char *u, const char *p, const char *customheade
         return NULL;
     }
 
-    curl_easy_cleanup(curl);
-    return (chunk.data);
+     curl_easy_cleanup(curl);
+     return (chunk.data);
 }
 
 /**
@@ -200,7 +200,7 @@ char *ofx_oauth_curl_post (const char *u, const char *p, const char *customheade
  * @param customheader specify custom HTTP header (or NULL for none)
  * @return returned HTTP
  */
-char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader) {
+char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader, const char* SSLCACertificateFile) {
 
     cout << "in here" << endl;
 
@@ -224,6 +224,8 @@ char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader
         return NULL;
     }
 
+    // GLOBAL_CURL_ENVIROMENT_OPTIONS;
+
     cout << "URL TO CHECK " << (q ? t1:u) << endl;
 
     curl_easy_setopt(curl, CURLOPT_URL, q ? t1:u);
@@ -242,12 +244,42 @@ char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader
 // #endif
     curl_easy_setopt(curl, CURLOPT_USERAGENT, OAUTH_USER_AGENT);
 // #ifdef OAUTH_CURL_TIMEOUT
-//     curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
-//     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+    // curl_easy_setopt(curl, CURLOPT_TIMEOUT, OAUTH_CURL_TIMEOUT);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
 // #endif
-    GLOBAL_CURL_ENVIROMENT_OPTIONS;
+    // GLOBAL_CURL_ENVIROMENT_OPTIONS;
+
+    char errorBuffer[1024];
+
+    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer);
+
+// THIS IS A BAD INSECURE WORKAROUND BECAUSE curl on linux64 isn't cooperating ...
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER , FALSE);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST , FALSE);
+
+    curl_easy_setopt(curl, CURLOPT_CAINFO , SSLCACertificateFile);
+
+    cout << "SSLCACertificateFile: " << SSLCACertificateFile << endl;
+
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+
+    // if (getenv("CURLOPT_CAINFO"))
+    // { 
+        // curl_easy_setopt(curl, CURLOPT_CAINFO, getenv("CURLOPT_CAINFO") ); 
+    //     // cout << "CURLOPT_CAINFO: " << getenv("CURLOPT_CAINFO") << endl; \
+    // }   
+
+
+
     res = curl_easy_perform(curl);
     curl_slist_free_all(slist);
+
+    if(strlen(errorBuffer) > 0)
+    {
+        cout << "ERROR: "<< errorBuffer << endl;
+    }
+
+
     if (q) {
         free(t1);
     }
@@ -320,9 +352,8 @@ char *ofx_oauth_curl_post_file (const char *u, const char *fn, size_t len, const
         return NULL;
     }
     fclose(f);
-
-    curl_easy_cleanup(curl);
-    return (chunk.data);
+     curl_easy_cleanup(curl);
+     return (chunk.data);
 }
 
 
@@ -510,13 +541,13 @@ char *ofx_oauth_curl_send_data_with_callback (const char *u, const char *data, s
  * @param customheader specify custom HTTP header (or NULL for default)
  * @return returned HTTP reply or NULL on error
  */
-char *ofx_oauth_curl_post_data(const char *u, const char *data, size_t len, const char *customheader) {
-    return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, NULL, NULL, NULL);
-}
+// char *ofx_oauth_curl_post_data(const char *u, const char *data, size_t len, const char *customheader) {
+//     return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, NULL, NULL, NULL);
+// }
 
-char *ofx_oauth_curl_send_data (const char *u, const char *data, size_t len, const char *customheader, const char *httpMethod) {
-    return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, NULL, NULL, httpMethod);
-}
+// char *ofx_oauth_curl_send_data (const char *u, const char *data, size_t len, const char *customheader, const char *httpMethod) {
+//     return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, NULL, NULL, httpMethod);
+// }
 
 char *ofx_oauth_curl_post_data_with_callback (const char *u, const char *data, size_t len, const char *customheader, void (*callback)(void*,int,size_t,size_t), void*callback_data) {
     return ofx_oauth_curl_send_data_with_callback(u, data, len, customheader, callback, callback_data, NULL);
@@ -533,12 +564,12 @@ char *ofx_oauth_curl_post_data_with_callback (const char *u, const char *data, s
  * @return  In case of an error NULL is returned; otherwise a pointer to the
  * replied content from HTTP server. latter needs to be freed by caller.
  */
-char *ofx_oauth_http_get2 (const char *u, const char *q, const char *customheader) {
+char *ofx_oauth_http_get2 (const char *u, const char *q, const char *customheader,const char* SSLCACertificateFile) {
 #ifdef HAVE_CURL
 
     cout << "==================THIS IS THE INSIDE OF THE THE FUNCTION " << endl;
 
-    return ofx_oauth_curl_get(u,q,customheader);
+    return ofx_oauth_curl_get(u,q,customheader,SSLCACertificateFile);
 #else
     return NULL;
 #endif
@@ -556,7 +587,7 @@ ofxOAuth::ofxOAuth(): ofxOAuthVerifierCallbackInterface()
     const char* v = getenv("CURLOPT_CAINFO");
     
     if(0 != v) _old_curlopt_cainfo = v;
-    
+
     // this Certificate Authority bundle is extracted 
     // from mozilla.org.pem, which can be found here
     //
@@ -567,7 +598,12 @@ ofxOAuth::ofxOAuth(): ofxOAuthVerifierCallbackInterface()
     // directory, an different location can 
     // can be set by calling:
     
-    setSSLCACertificateFile("cacert.pem");
+    // cout << "OLD_CURLOPT_CAINFO" << getenv("CURLOPT_CAINFO") << endl;
+
+    // setSSLCACertificateFile("cacert.pem");
+    setSSLCACertificateFile("certdata.txt");
+
+    // cout << "NEW_CURLOPT_CAINFO" << getenv("CURLOPT_CAINFO") << endl;
     
     // this setter sets an environmental variable,
     // which is accessed by liboauth whenever libcurl
@@ -594,14 +630,14 @@ ofxOAuth::~ofxOAuth()
 {
     // be nice and set it back, if there was 
     // something there when we started.
-    if(!_old_curlopt_cainfo.empty())
-    {
-        setenv("CURLOPT_CAINFO",_old_curlopt_cainfo.c_str(),true);
-    }
-    else
-    {
-        unsetenv("CURLOPT_CAINFO");
-    }
+    // if(!_old_curlopt_cainfo.empty())
+    // {
+    //     setenv("CURLOPT_CAINFO",_old_curlopt_cainfo.c_str(),true);
+    // }
+    // else
+    // {
+    //     unsetenv("CURLOPT_CAINFO");
+    // }
 
     ofRemoveListener(ofEvents().update,this,&ofxOAuth::update);
 }
@@ -612,7 +648,7 @@ void ofxOAuth::setup()
     loadCredentials();
 }
 
-
+//------------------------------------------------------------------------------
 void ofxOAuth::setup(const std::string& _apiURL,
                      const std::string& _requestTokenUrl,
                      const std::string& _accessTokenUrl,
@@ -840,7 +876,8 @@ std::string ofxOAuth::get(const std::string& uri, const std::string& query)
 
     char* p_reply = ofx_oauth_http_get2(req_url.c_str(),   // the base url to get
                                         0,              // the query string to send
-                                        http_hdr.c_str()); // Authorization header is included here
+                                        http_hdr.c_str(),
+                                        SSLCACertificateFile.c_str()); // Authorization header is included here
 
     if(0 != p_reply)
     {
@@ -1281,9 +1318,14 @@ std::map<std::string, std::string> ofxOAuth::obtainRequestToken()
     ofLogVerbose("ofxOAuth::obtainRequestToken") << "Request HEADER = " << req_hdr;
     ofLogVerbose("ofxOAuth::obtainRequestToken") << "http    HEADER = " << http_hdr;
     
+
+
+
+
     char* p_reply = ofx_oauth_http_get2(req_url.c_str(),   // the base url to get
                                     0,              // the query string to send
-                                    http_hdr.c_str()); // Authorization header is included here
+                                    http_hdr.c_str(),
+                                        SSLCACertificateFile.c_str()); // Authorization header is included here
 
     if(0 != p_reply)
     {
@@ -1488,7 +1530,8 @@ std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
     
     char* p_reply = ofx_oauth_http_get2(req_url.c_str(),   // the base url to get
                                      0,              // the query string to send
-                                     http_hdr.c_str()); // Authorization header is included here
+                                     http_hdr.c_str(),
+                                        SSLCACertificateFile.c_str()); // Authorization header is included here
     
     if(0 != p_reply)
     {
@@ -1522,18 +1565,6 @@ std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
                 {
                     accessTokenSecret = tokens[1];
                 }
-                else if(Poco::icompare(tokens[0],"encoded_user_id") == 0)
-                {
-                    encodedUserId = tokens[1];
-                }
-                else if(Poco::icompare(tokens[0],"user_id") == 0)
-                {
-                    userId = tokens[1];
-                }
-                else if(Poco::icompare(tokens[0],"screen_name") == 0)
-                {
-                    screenName = tokens[1];
-                }
                 else if(Poco::icompare(tokens[0],"oauth_problem") == 0)
                 {
                     ofLogError("ofxOAuth::obtainAccessToken") << "Got oauth problem: " << tokens[1];
@@ -1541,6 +1572,7 @@ std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
                 else
                 {
                     ofLogNotice("ofxOAuth::obtainAccessToken") << "got an unknown parameter: " << tokens[0] << "=" << tokens[1];
+                    customInfo[tokens[0]] = tokens[1];
                 }
             }
             else
@@ -1852,7 +1884,7 @@ void ofxOAuth::setUserPassword(const std::string& v)
 }
 
 
-std::string ofxOAuth::getConsumerKey()
+std::string ofxOAuth::getConsumerKey() const
 {
     return consumerKey;
 }
@@ -1863,8 +1895,7 @@ void ofxOAuth::setConsumerKey(const std::string& v)
     consumerKey = v;
 }
 
-
-std::string ofxOAuth::getConsumerSecret()
+std::string ofxOAuth::getConsumerSecret() const
 {
     return consumerSecret;
 }
@@ -1882,11 +1913,10 @@ void ofxOAuth::setApiName(const std::string& v)
 }
 
 
-std::string ofxOAuth::getApiName()
+std::string ofxOAuth::getApiName() const
 {
     return apiName;
 }
-
 
 void ofxOAuth::receivedVerifierCallbackRequest(const Poco::Net::HTTPServerRequest& request)
 {
@@ -1949,7 +1979,7 @@ void ofxOAuth::receivedVerifierCallbackPostParams(const Poco::Net::NameValueColl
 }
 
 
-std::string ofxOAuth::getRealm()
+std::string ofxOAuth::getRealm() const
 {
     return realm;
 }
@@ -1985,14 +2015,8 @@ void ofxOAuth::saveCredentials()
     XML.setValue("oauth:access_token", accessToken);
 
     XML.setValue("oauth:access_secret",accessTokenSecret);
-    
-    XML.setValue("oauth:screen_name",screenName);
-    
-    XML.setValue("oauth:user_id", userId);
-    XML.setValue("oauth:user_id_encoded",encodedUserId);
 
-    XML.setValue("oauth:user_password", userPassword);
-    XML.setValue("oauth:user_password_encoded",encodedUserPassword);
+    // set additional info
 
     if(!XML.saveFile(credentialsPathname))
     {
@@ -2009,19 +2033,41 @@ void ofxOAuth::loadCredentials()
     if(XML.loadFile(credentialsPathname))
     {
 //        <oauth api="GENERIC">
-//          <consumer_secret></consumer_secret>
+//          <api>
+//              <name></name>
+//              <request_token_url></<request_token_url>
+//              <access_token_url></<access_token_url>
+//              <authorize_url></<authorize_url>
+//          </api>
+//          <consumer_token></consumer_token>
 //          <consumer_secret></consumer_secret>
 //          <access_token></access_token>
 //          <access_secret></access_secret>
-//          <user_id></user_id>
-//          <user_id_encoded></user_id_encoded>
-//          <user_password></user_password>
-//          <user_password_encoded></user_password_encoded>
+//          <custom>
+//              <user_id></user_id>
+//              <user_id_encoded></user_id_encoded>
+//              <user_password></user_password>
+//              <user_password_encoded></user_password_encoded>
+//          </custom>
 //        </oauth>
 
+        std::string _consumerKey = XML.getValue("oauth:consumer_key", "");
+        std::string _consumerSecret = XML.getValue("oauth:consumer_secret", "");
 
-        if(XML.getValue("oauth:consumer_key","") != consumerKey ||
-           XML.getValue("oauth:consumer_secret","") != consumerSecret)
+        std::string _accessToken = XML.getValue("oauth:access_token", "");
+        std::string _accessSecret = XML.getValue("oauth:access_secret", "");
+
+        std::string _apiName = XML.getValue("oauth:api::name", "");
+
+        std::string _apiRequestTokenUrl = XML.getValue("oauth:api::request_token_url", "");
+        std::string _apiAccessTokenUrl = XML.getValue("oauth:api::access_token_url", "");
+        std::string _apiAuthorizeUrl = XML.getValue("oauth:api::authorize_url", "");
+
+
+
+        if(!consumerKey.empty() &&
+           (XML.getValue("oauth:consumer_key","") != consumerKey ||
+            XML.getValue("oauth:consumer_secret","") != consumerSecret))
         {
             ofLogError("ofxOAuth::loadCredentials") << "Found a credential file, but did not match the consumer secret / key provided.  Please delete your credentials file: " + ofToDataPath(credentialsPathname) + " and try again.";
             return;
@@ -2102,8 +2148,11 @@ void ofxOAuth::setOAuthMethod(AuthMethod _oauthMethod)
 
 void ofxOAuth::setSSLCACertificateFile(const std::string& pathname)
 {
-    SSLCACertificateFile = pathname;
-    setenv("CURLOPT_CAINFO", ofToDataPath(SSLCACertificateFile).c_str(), true);
+        SSLCACertificateFile = ofToDataPath(pathname,true);
+
+    // setenv("CURLOPT_CAINFO", ofToDataPath(SSLCACertificateFile,true).c_str(), true);
+
+    cout << "just set CACERT to : " << SSLCACertificateFile << endl;
 }
 
 
