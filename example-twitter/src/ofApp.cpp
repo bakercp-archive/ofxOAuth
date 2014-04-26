@@ -26,7 +26,7 @@
 #include "ofApp.h"
 
 
-//------------------------------------------------------------------------------
+
 void ofApp::setup()
 {
     ofSetFrameRate(30);
@@ -35,12 +35,12 @@ void ofApp::setup()
     // A simplified interface when using the ofxExampleTwitterClient class.
     // Twitter-specific configuration details can be taken care of the 
     // ofxOAuth base class.
-    client.setup("IaMf5A1GX2zWhCU6LRazA","nD3Njra9ROpYOm5eJsZTCEp6Zf7EouEwG5pl6l7YM");
+    client.setup("0temMq9KWLx8731GcTXevA","7bI0ScK5gBN3dlGxaC9oTuVFQQXThC9prfD28nmrY");
     
     // Once authenticated, press the spacebar to try a test call.
 }
 
-//------------------------------------------------------------------------------
+
 void ofApp::draw()
 {
     if(client.isAuthorized())
@@ -53,7 +53,7 @@ void ofApp::draw()
     }
 }
 
-//------------------------------------------------------------------------------
+
 void ofApp::keyPressed(int key)
 {
      if(key == ' ')
@@ -62,10 +62,12 @@ void ofApp::keyPressed(int key)
         {
             // Get tweets.
             std::string s = client.exampleMethod();
+
             // Post new status
-            //std::string s = client.exampleUpdateStatusMethod("Hi from OF!");
+            // std::string s = client.exampleUpdateStatusMethod("Hi from OF!");
+
             // Post status & image
-            //std::string s = client.exampleUpdateStatusWithPhotoMethod("Hi from OF!", "buses.jpg");
+            // std::string s = client.exampleUpdateStatusWithPhotoMethod("Hi from OF!", "buses.jpg");
             ofLogNotice("testApp::keyPressed") << s;
         }
         else

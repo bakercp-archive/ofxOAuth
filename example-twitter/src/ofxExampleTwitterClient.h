@@ -56,14 +56,19 @@ public:
     }
     
     // This method is an example of posting an status to twitter.
-    std::string exampleUpdateStatusMethod(string msg)
+    std::string exampleUpdateStatusMethod(const string& msg)
     {
-        return post("/1.1/statuses/update.json","status="+msg);
+        return post("/1.1/statuses/update.json", "status=" + msg);
     }
     
-    std::string exampleUpdateStatusWithPhotoMethod(string msg, string imgpath)
+    std::string exampleUpdateStatusWithPhotoMethod(const string& msg,
+                                                   const string& path)
     {
-        return postfile_multipartdata("/1.1/statuses/update_with_media.json","status="+msg,"media[]",imgpath);
+        std::string fullPath = ofToDataPath(path, true);
+
+        return postfile_multipartdata("/1.1/statuses/update_with_media.json",
+                                      "status=" + msg,
+                                      "media[]", fullPath);
     }
 
 };
