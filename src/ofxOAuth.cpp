@@ -37,7 +37,7 @@
 #include <curl/curl.h>
 #include <sys/stat.h>
 
-# define GLOBAL_CURL_ENVIROMENT_OPTIONS \
+#define GLOBAL_CURL_ENVIROMENT_OPTIONS \
 if (getenv("CURLOPT_PROXYAUTH")){ \
 curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY); \
 cout << "CURLOPT_PROXYAUTH: " << getenv("CURLOPT_PROXYAUTH") << endl; \
