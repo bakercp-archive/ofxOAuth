@@ -241,7 +241,7 @@ protected:
     
     std::string makeHTMLList(const std::string& value)
     {
-        string html;
+        std::string html;
         html += "<ul>";
         html += ("<li>" + value + "</li>");
         html += "</ul>";

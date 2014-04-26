@@ -506,6 +506,13 @@ ofxOAuth::~ofxOAuth()
     ofRemoveListener(ofEvents().update,this,&ofxOAuth::update);
 }
 
+void ofxOAuth::setup()
+{
+    loadCredentials();
+}
+
+
+
 //------------------------------------------------------------------------------
 void ofxOAuth::setup(const std::string& _apiURL,
                      const std::string& _requestTokenUrl,
@@ -1151,18 +1158,6 @@ std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
                 {
                     accessTokenSecret = tokens[1];
                 }
-                else if(Poco::icompare(tokens[0],"encoded_user_id") == 0)
-                {
-                    encodedUserId = tokens[1];
-                }
-                else if(Poco::icompare(tokens[0],"user_id") == 0)
-                {
-                    userId = tokens[1];
-                }
-                else if(Poco::icompare(tokens[0],"screen_name") == 0)
-                {
-                    screenName = tokens[1];
-                }
                 else if(Poco::icompare(tokens[0],"oauth_problem") == 0)
                 {
                     ofLogError("ofxOAuth::obtainAccessToken") << "Got oauth problem: " << tokens[1];
@@ -1170,6 +1165,7 @@ std::map<std::string,std::string> ofxOAuth::obtainAccessToken()
                 else
                 {
                     ofLogNotice("ofxOAuth::obtainAccessToken") << "got an unknown parameter: " << tokens[0] << "=" << tokens[1];
+                    customInfo[tokens[0]] = tokens[1];
                 }
             }
             else
@@ -1433,55 +1429,7 @@ void ofxOAuth::setAccessTokenSecret(const std::string& v)
 }
 
 //------------------------------------------------------------------------------
-std::string ofxOAuth::getEncodedUserId()
-{
-    return encodedUserId;
-}
-
-//------------------------------------------------------------------------------
-void ofxOAuth::setEncodedUserId(const std::string& v)
-{
-    encodedUserId = v;
-}
-
-//------------------------------------------------------------------------------
-std::string ofxOAuth::getUserId()
-{
-    return userId;
-}
-
-//------------------------------------------------------------------------------
-void ofxOAuth::setUserId(const std::string& v)
-{
-    userId = v;
-}
-
-//------------------------------------------------------------------------------
-std::string ofxOAuth::getEncodedUserPassword()
-{
-    return encodedUserPassword;
-}
-
-//------------------------------------------------------------------------------
-void ofxOAuth::setEncodedUserPassword(const std::string& v)
-{
-    encodedUserPassword = v;
-}
-
-//------------------------------------------------------------------------------
-std::string ofxOAuth::getUserPassword()
-{
-    return userPassword;
-}
-
-//------------------------------------------------------------------------------
-void ofxOAuth::setUserPassword(const std::string& v)
-{
-    userPassword = v;
-}
-
-//------------------------------------------------------------------------------
-std::string ofxOAuth::getConsumerKey()
+std::string ofxOAuth::getConsumerKey() const
 {
     return consumerKey;
 }
@@ -1493,7 +1441,7 @@ void ofxOAuth::setConsumerKey(const std::string& v)
 }
 
 //------------------------------------------------------------------------------
-std::string ofxOAuth::getConsumerSecret()
+std::string ofxOAuth::getConsumerSecret() const
 {
     return consumerSecret;
 }
@@ -1515,6 +1463,13 @@ std::string ofxOAuth::getApiName()
 {
     return apiName;
 }
+
+//------------------------------------------------------------------------------
+std::map<std::string, std::string> ofxOAuth::getCustomInfo() const
+{
+    return customInfo;
+}
+
 
 //------------------------------------------------------------------------------
 void ofxOAuth::receivedVerifierCallbackRequest(const Poco::Net::HTTPServerRequest& request)
@@ -1608,14 +1563,8 @@ void ofxOAuth::saveCredentials()
     XML.setValue("oauth:access_token", accessToken);
 
     XML.setValue("oauth:access_secret",accessTokenSecret);
-    
-    XML.setValue("oauth:screen_name",screenName);
-    
-    XML.setValue("oauth:user_id", userId);
-    XML.setValue("oauth:user_id_encoded",encodedUserId);
 
-    XML.setValue("oauth:user_password", userPassword);
-    XML.setValue("oauth:user_password_encoded",encodedUserPassword);
+    // set additional info
 
     if(!XML.saveFile(credentialsPathname))
     {
@@ -1632,19 +1581,41 @@ void ofxOAuth::loadCredentials()
     if(XML.loadFile(credentialsPathname))
     {
 //        <oauth api="GENERIC">
-//          <consumer_secret></consumer_secret>
+//          <api>
+//              <name></name>
+//              <request_token_url></<request_token_url>
+//              <access_token_url></<access_token_url>
+//              <authorize_url></<authorize_url>
+//          </api>
+//          <consumer_token></consumer_token>
 //          <consumer_secret></consumer_secret>
 //          <access_token></access_token>
 //          <access_secret></access_secret>
-//          <user_id></user_id>
-//          <user_id_encoded></user_id_encoded>
-//          <user_password></user_password>
-//          <user_password_encoded></user_password_encoded>
+//          <custom>
+//              <user_id></user_id>
+//              <user_id_encoded></user_id_encoded>
+//              <user_password></user_password>
+//              <user_password_encoded></user_password_encoded>
+//          </custom>
 //        </oauth>
 
+        std::string _consumerKey = XML.getValue("oauth:consumer_key", "");
+        std::string _consumerSecret = XML.getValue("oauth:consumer_secret", "");
 
-        if(XML.getValue("oauth:consumer_key","") != consumerKey ||
-           XML.getValue("oauth:consumer_secret","") != consumerSecret)
+        std::string _accessToken = XML.getValue("oauth:access_token", "");
+        std::string _accessSecret = XML.getValue("oauth:access_secret", "");
+
+        std::string _apiName = XML.getValue("oauth:api::name", "");
+
+        std::string _apiRequestTokenUrl = XML.getValue("oauth:api::request_token_url", "");
+        std::string _apiAccessTokenUrl = XML.getValue("oauth:api::access_token_url", "");
+        std::string _apiAuthorizeUrl = XML.getValue("oauth:api::authorize_url", "");
+
+
+
+        if(!consumerKey.empty() &&
+           (XML.getValue("oauth:consumer_key","") != consumerKey ||
+            XML.getValue("oauth:consumer_secret","") != consumerSecret))
         {
             ofLogError("ofxOAuth::loadCredentials") << "Found a credential file, but did not match the consumer secret / key provided.  Please delete your credentials file: " + ofToDataPath(credentialsPathname) + " and try again.";
             return;
@@ -1657,19 +1628,6 @@ void ofxOAuth::loadCredentials()
             ofLogError("ofxOAuth::loadCredentials") << "Found a credential file, but access token / secret were empty.  Please delete your credentials file: " + ofToDataPath(credentialsPathname) + " and try again.";
             return;
         }
-
-        apiName             = XML.getValue("oauth:api_name", "");
-
-        accessToken         = XML.getValue("oauth:access_token", "");
-        accessTokenSecret   = XML.getValue("oauth:access_secret","");
-
-        screenName          = XML.getValue("oauth:screen_name","");
-        
-        userId              = XML.getValue("oauth:user_id", "");
-        encodedUserId       = XML.getValue("oauth:user_id_encoded","");
-
-        userPassword        = XML.getValue("oauth:user_password", "");
-        encodedUserPassword = XML.getValue("oauth:user_password_encoded","");        
     }
     else
     {
