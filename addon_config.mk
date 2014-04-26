@@ -37,7 +37,7 @@ common:
 	
 	# any special flag that should be passed to the linker when using this
 	# addon, also used for system libraries with -lname
-	ADDON_LDFLAGS = -lcurl
+	#ADDON_LDFLAGS = -lcurl
 	
 	# linux only, any library that should be included in the project using
 	# pkg-config
@@ -63,6 +63,8 @@ common:
 linux64:
 	# binary libraries, these will be usually parsed from the file system but some 
 	# libraries need to passed to the linker in a specific order 
+	ADDON_INCLUDES_EXCLUDE = libs/libcurl/include
+	ADDON_PKG_CONFIG_LIBRARIES = libcurl
 linux:
 win_cb:
 linuxarmv6l:
