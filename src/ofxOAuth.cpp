@@ -2148,11 +2148,9 @@ void ofxOAuth::setOAuthMethod(AuthMethod _oauthMethod)
 
 void ofxOAuth::setSSLCACertificateFile(const std::string& pathname)
 {
-        SSLCACertificateFile = ofToDataPath(pathname,true);
-
+    SSLCACertificateFile = ofToDataPath(pathname,true);
     // setenv("CURLOPT_CAINFO", ofToDataPath(SSLCACertificateFile,true).c_str(), true);
-
-    cout << "just set CACERT to : " << SSLCACertificateFile << endl;
+    ofLogVerbose("ofxOAuth::setSSLCACertificateFile") << "Set CACERT to : " << SSLCACertificateFile;
 }
 
 
