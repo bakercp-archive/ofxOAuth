@@ -200,10 +200,11 @@ char *ofx_oauth_curl_post (const char *u, const char *p, const char *customheade
  * @param customheader specify custom HTTP header (or NULL for none)
  * @return returned HTTP
  */
-char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader, const char* SSLCACertificateFile) {
-
-    cout << "in here" << endl;
-
+char *ofx_oauth_curl_get (const char *u,
+                          const char *q,
+                          const char *customheader,
+                          const char* SSLCACertificateFile)
+{
     CURL *curl;
     CURLcode res;
     struct curl_slist *slist=NULL;
@@ -220,13 +221,13 @@ char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader
 
     curl = curl_easy_init();
     if(!curl) {
-        cout << "CURL WAS NOT INITIALIZED" << endl;
+        ofLogError() << "CURL WAS NOT INITIALIZED";
         return NULL;
     }
 
     // GLOBAL_CURL_ENVIROMENT_OPTIONS;
 
-    cout << "URL TO CHECK " << (q ? t1:u) << endl;
+//    cout << "URL TO CHECK " << (q ? t1:u) << endl;
 
     curl_easy_setopt(curl, CURLOPT_URL, q ? t1:u);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
@@ -259,7 +260,7 @@ char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader
 
     curl_easy_setopt(curl, CURLOPT_CAINFO , SSLCACertificateFile);
 
-    cout << "SSLCACertificateFile: " << SSLCACertificateFile << endl;
+    ofLogVerbose() << "SSLCACertificateFile: " << SSLCACertificateFile << endl;
 
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
 
@@ -280,18 +281,20 @@ char *ofx_oauth_curl_get (const char *u, const char *q, const char *customheader
     }
 
 
-    if (q) {
+    if (q)
+    {
         free(t1);
     }
+
     curl_easy_cleanup(curl);
 
-    if (res) {
-                cout << "CURL RETURNED NOTHING" << endl;
-
+    if (res)
+    {
+        ofLogVerbose() << "CURL RETURNED NOTHING";
         return NULL;
     }
 
-    cout << "CURL RETURNED THIS: " << chunk.data << endl;
+    ofLogVerbose() << "CURL RETURNED THIS: " << chunk.data;
 
     return (chunk.data);
 }
@@ -567,7 +570,7 @@ char *ofx_oauth_curl_post_data_with_callback (const char *u, const char *data, s
 char *ofx_oauth_http_get2 (const char *u, const char *q, const char *customheader,const char* SSLCACertificateFile) {
 #ifdef HAVE_CURL
 
-    cout << "==================THIS IS THE INSIDE OF THE THE FUNCTION " << endl;
+    ofLogVerbose() << "==================THIS IS THE INSIDE OF THE THE FUNCTION ";
 
     return ofx_oauth_curl_get(u,q,customheader,SSLCACertificateFile);
 #else
