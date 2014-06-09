@@ -66,8 +66,20 @@ linux64:
 	ADDON_INCLUDES_EXCLUDE = libs/libcurl/include
 	ADDON_PKG_CONFIG_LIBRARIES = libcurl
 linux:
+        # binary libraries, these will be usually parsed from the file system but some
+        # libraries need to passed to the linker in a specific order
+        ADDON_INCLUDES_EXCLUDE = libs/libcurl/include
+        ADDON_PKG_CONFIG_LIBRARIES = libcurl
 win_cb:
 linuxarmv6l:
+        # binary libraries, these will be usually parsed from the file system but some
+        # libraries need to passed to the linker in a specific order
+        ADDON_INCLUDES_EXCLUDE = libs/libcurl/include
+        ADDON_PKG_CONFIG_LIBRARIES = libcurl
 linuxarmv7l:
+        # binary libraries, these will be usually parsed from the file system but some
+        # libraries need to passed to the linker in a specific order
+        ADDON_INCLUDES_EXCLUDE = libs/libcurl/include
+        ADDON_PKG_CONFIG_LIBRARIES = libcurl
 android/armeabi:	
 android/armeabi-v7a:	
