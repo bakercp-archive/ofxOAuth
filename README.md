@@ -1,3 +1,5 @@
+#_This project has been archived and superceded by [ofxHTTP](https://github.com/bakercp/ofxHTTP/)_.
+
 ofxOAuth
 ========
 
